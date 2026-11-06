@@ -34,7 +34,7 @@ With a source checkout, Python 3 and Node.js 24+, run:
 
     python3 lib/verification/run-tests.py
 
-The source-controlled JSON bundle contains the actual tests. The runner makes a temporary checkout, mocks Hatchable services and runs the test suite without contacting production data. 166 tests passed on Node.js 24.22.2, including a 36-case footprint/program matrix, adversarial geometry/room/furniture/window/door-swing faults, distinct deterministic alternatives, 2D/3D furniture extents, paused multi-storey requests, historical report reads, access/ownership, stale exports and concurrency protection. Hosted runtime and browser checks are separate requirements before deployment.
+The source-controlled JSON bundle contains the actual tests. The runner makes a temporary checkout, mocks Hatchable services and runs the test suite without contacting production data. 170 tests passed on Node.js 24.22.2, including a 36-case footprint/program matrix, adversarial geometry/room/furniture/window/door-swing faults, distinct deterministic alternatives, 2D/3D furniture extents, paused multi-storey requests, historical report reads, access/ownership, stale exports and concurrency protection. Site Intelligence now accepts measured exclusion-zone polygons. Only verified zones with survey, title-plan, authority-record or professional-observation provenance block preliminary footprint candidates; unverified zones are retained and disclosed but not applied. Side/distance setbacks remain unapplied. Hosted runtime and browser checks are separate requirements before deployment.
 
 ## Next release gates
 
@@ -48,4 +48,4 @@ The source-controlled JSON bundle contains the actual tests. The runner makes a 
 
 ## Version 60 source snapshot (2026-11-06)
 
-This repository branch mirrors the Hatchable Version 60 source tree for offline review and regression testing. GitHub Actions completed the source-controlled suite on Node.js 24.22.2 with 166 passing tests and zero failures. The tests mock Hatchable services and do not contact production data. This result does not verify the hosted Hatchable runtime, browser behavior, production database, professional compliance or deployment readiness.
+This repository branch mirrors the Hatchable Version 60 source tree for offline review and regression testing. GitHub Actions completed the source-controlled suite on Node.js 24.22.2 with 170 passing tests and zero failures. The tests mock Hatchable services and do not contact production data. This result does not verify the hosted Hatchable runtime, browser behavior, production database, professional compliance or deployment readiness.
