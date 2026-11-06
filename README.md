@@ -45,3 +45,7 @@ The source-controlled JSON bundle contains the actual tests. The runner makes a 
 5. Restore multi-storey generation only after vertical coordination, stair/headroom and egress tests are verified.
 6. Activate and test the external rendering pipeline.
 7. Implement payments and final business/legal policies last.
+
+## Version 60 source snapshot (2026-11-06)
+
+This repository branch mirrors the Hatchable Version 60 source tree for offline review and regression testing. It is not connected to production deployment. The previously recorded 84-test result was not produced by the Node 24 GitHub Actions workflow. Treat Node 24+ verification as **pending** until the workflow completes successfully on this branch. Do not mark any runtime or release gate verified based on source inspection alone.
