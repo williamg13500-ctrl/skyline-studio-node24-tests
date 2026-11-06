@@ -1,0 +1,85 @@
+[auth]
+enabled = true
+providers = ["email"]
+
+[ai]
+required = false
+description = "Optional AI-assisted architectural brief interpretation. Connect an OpenAI, Anthropic or Google provider in Hatchable Setup; the guided reader remains available without AI."
+
+[[api]]
+name = "stripe"
+auth = "api_key"
+base_url = "https://api.stripe.com"
+key_header = "Authorization"
+key_prefix = "Bearer "
+encoding = "form"
+required = false
+description = "Stripe subscription checkout and customer portal. Connect a TEST key first; live billing also requires approved policies and a recurring price."
+
+[[secret]]
+name = "STRIPE_WEBHOOK_SECRET"
+required = false
+description = "Signing secret for /api/billing/webhook; subscribe to checkout.session.completed and customer.subscription.created/updated/deleted."
+
+[[secret]]
+name = "RENDER_WORKER_SECRET"
+required = false
+description = "Long random shared signing secret for the external Blender worker. Never put this value into a public file or chat."
+
+[[config]]
+name = "billing_enabled"
+type = "boolean"
+label = "Enable Stripe checkout after test-mode verification"
+default = false
+
+[[config]]
+name = "stripe_price_id"
+type = "string"
+label = "Stripe recurring Studio price ID"
+
+[[config]]
+name = "policies_approved"
+type = "boolean"
+label = "Owner confirms legal review and published business policies"
+default = false
+help = "Only enable after entity, jurisdiction, pricing, cancellation, refunds, privacy and provider processing are reviewed and published."
+
+[[config]]
+name = "terms_url"
+type = "url"
+label = "Reviewed and published terms URL"
+
+[[config]]
+name = "privacy_url"
+type = "url"
+label = "Reviewed and published privacy notice URL"
+
+[[config]]
+name = "refunds_url"
+type = "url"
+label = "Reviewed cancellation and refund policy URL"
+
+[[config]]
+name = "render_enabled"
+type = "boolean"
+label = "Enable render queue after connecting and testing Blender worker"
+default = false
+
+[[config]]
+name = "studio_access_mode"
+type = "select"
+label = "Studio access during development"
+options = [{ value = "preview", label = "Signed-in preview (no payment)" }, { value = "subscribers", label = "Active subscribers and admins" }]
+default = "preview"
+help = "Preview users keep private account-scoped projects. Construction exports remain blocked. Payments are deferred."
+
+[[config]]
+name = "ai_interpretation_enabled"
+type = "boolean"
+label = "Enable AI brief interpretation after provider test"
+default = false
+help = "First connect a provider in Setup and pass the Studio admin AI connection test. Only then enable this switch. The guided reader remains available when disabled."
+
+[db.tables.studio_billing_accounts]
+read = "own"
+write = "own"
