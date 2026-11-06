@@ -3,8 +3,19 @@ name: Skyline Node 24 verification
 on:
   workflow_dispatch:
   push:
+    branches:
+      - 'snapshot/**'
     paths:
-      - '*.zip'
+      - 'api/**'
+      - 'lib/**'
+      - 'migrations/**'
+      - 'public/**'
+      - 'hatchable.toml'
+      - 'README.md'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -28,31 +39,11 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Unpack Skyline source
+      - name: Run complete Skyline test suite
         shell: bash
         run: |
-          SOURCE_ZIP="$(find . -maxdepth 1 -type f -name '*.zip' -print -quit)"
-          if [ -z "$SOURCE_ZIP" ]; then
-            echo "::error::Skyline source ZIP not found in repository root."
-            exit 1
-          fi
-          mkdir -p source
-          unzip -q "$SOURCE_ZIP" -d source
-
-      - name: Run complete test suite
-        shell: bash
-        run: |
-          TEST_RUNNER="$(find source -type f -path '*/lib/verification/run-tests.py' -print -quit)"
-          if [ -z "$TEST_RUNNER" ]; then
-            echo "::error::Could not find lib/verification/run-tests.py in source ZIP."
-            exit 1
-          fi
-
-          PROJECT_ROOT="${TEST_RUNNER%/lib/verification/run-tests.py}"
-          cd "$PROJECT_ROOT"
-
           echo "Node version:"
           node --version
-
-          echo "Running complete Skyline test suite:"
+          python3 --version
+          echo "Running the complete source-controlled Skyline suite:"
           python3 lib/verification/run-tests.py
