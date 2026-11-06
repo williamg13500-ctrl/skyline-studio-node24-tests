@@ -23,7 +23,7 @@ test.describe('Skyline Site Intelligence workspace', () => {
     await expect(page.locator('#app')).toBeVisible();
     await expect(page.locator('#site-intelligence')).toBeVisible();
   });
-  async function clickMap(page,x,y){const box=await page.locator('#site-canvas').boundingBox();await page.mouse.click(box.x+x/1000*box.width,box.y+y/650*box.height);}
+  async function clickMap(page,x,y){const canvas=page.locator('#site-canvas');await canvas.scrollIntoViewIfNeeded();const box=await canvas.boundingBox();await page.mouse.click(box.x+x/1000*box.width,box.y+y/650*box.height);}
   async function drawBoundary(page){await page.selectOption('#site-draw-mode','boundary');for(const [x,y] of [[100,100],[900,100],[900,550],[100,550]])await clickMap(page,x,y);await page.click('#site-finish');await expect(page.locator('#site-drawing-status')).toContainText('Boundary closed');}
   async function drawZone(page,label='Utility corridor'){await page.selectOption('#site-draw-mode','exclusion');await page.fill('#site-zone-label',label);await page.selectOption('#site-zone-type','utility');await page.selectOption('#site-zone-source','survey');await page.selectOption('#site-zone-status','provided');for(const [x,y] of [[320,240],[520,240],[520,390],[320,390]])await clickMap(page,x,y);await page.click('#site-zone-finish');}
 
@@ -35,7 +35,7 @@ test.describe('Skyline Site Intelligence workspace', () => {
     expect(await canvas.evaluate(el=>el.toDataURL())).not.toBe(blank);
     await page.locator('[data-edit-zone="0"]').click();
     await page.selectOption('#site-zone-status','verified');await page.fill('#site-zone-label','Verified corridor');
-    const box=await canvas.boundingBox();
+    await canvas.scrollIntoViewIfNeeded();const box=await canvas.boundingBox();
     await page.mouse.move(box.x+320/1000*box.width,box.y+240/650*box.height);
     await page.mouse.down();await page.mouse.move(box.x+350/1000*box.width,box.y+260/650*box.height);await page.mouse.up();
     await page.click('#site-zone-finish');
