@@ -12,6 +12,8 @@ on:
       - 'public/**'
       - 'hatchable.toml'
       - 'README.md'
+      - 'tests/**'
+      - 'playwright.config.js'
       - '.github/workflows/**'
   pull_request:
     branches:
@@ -47,3 +49,24 @@ jobs:
           python3 --version
           echo "Running the complete source-controlled Skyline suite:"
           python3 lib/verification/run-tests.py
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install pinned Playwright test runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Site Intelligence browser tests
+        run: npx playwright test
