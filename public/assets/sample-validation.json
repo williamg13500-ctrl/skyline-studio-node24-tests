@@ -1,0 +1,113 @@
+{
+  "brief": {
+    "name": "Skyline reference residence",
+    "W": 10,
+    "D": 12,
+    "storeys": 1,
+    "beds": 3,
+    "baths": 2,
+    "study": false,
+    "roof": false,
+    "low": false,
+    "style": "modern",
+    "layoutOption": 0
+  },
+  "revision": "891de37f4904bc778aab86fa655963aadd140c8b3ebca9c110e17c93443a3a7d",
+  "status": "passed",
+  "approval": "not_approved",
+  "constructionExportAllowed": false,
+  "criticalCount": 0,
+  "uncheckedCount": 8,
+  "issues": [],
+  "checks": [
+    {
+      "name": "room_geometry",
+      "status": "passed"
+    },
+    {
+      "name": "walls",
+      "status": "passed"
+    },
+    {
+      "name": "openings",
+      "status": "passed"
+    },
+    {
+      "name": "connectivity",
+      "status": "passed"
+    },
+    {
+      "name": "scope",
+      "status": "passed"
+    },
+    {
+      "name": "stair_geometry",
+      "status": "not_applicable"
+    },
+    {
+      "name": "clear_internal_areas",
+      "status": "passed"
+    },
+    {
+      "name": "room_proportions_and_targets",
+      "status": "passed"
+    },
+    {
+      "name": "furniture_fit",
+      "status": "passed"
+    },
+    {
+      "name": "door_swing_envelopes",
+      "status": "passed"
+    },
+    {
+      "name": "external_window_presence",
+      "status": "passed"
+    },
+    {
+      "name": "circulation_ratio",
+      "status": "passed"
+    },
+    {
+      "name": "furniture_access_clearances",
+      "status": "not_checked"
+    },
+    {
+      "name": "daylight_and_ventilation",
+      "status": "not_checked"
+    },
+    {
+      "name": "accessibility",
+      "status": "not_checked"
+    },
+    {
+      "name": "regulatory_compliance",
+      "status": "not_checked"
+    },
+    {
+      "name": "structure",
+      "status": "not_checked"
+    },
+    {
+      "name": "stair_headroom_and_egress",
+      "status": "not_checked"
+    },
+    {
+      "name": "elevations_and_sections",
+      "status": "not_checked"
+    },
+    {
+      "name": "professional_review",
+      "status": "not_checked"
+    }
+  ],
+  "scope": "Single-storey rectangular residential concepts from a bounded partition solver. Clear rectangular room areas exclude assumed wall thickness; hallway areas and door thresholds are not included in that total. Furniture footprint containment and conservative door-swing envelopes are checked. Furniture access clearances, daylight performance, ventilation, regulations, structure and approval remain unverified. No claim of a globally optimal architectural layout is made.",
+  "assumptions": [
+    "Metres; footprint dimensions are wall centreline dimensions.",
+    "North at top; orientation is assumed.",
+    "Wall height 2.7 m, exterior thickness 0.30 m, interior thickness 0.12 m.",
+    "Window sill 0.90 m and opening head 2.10 m are schematic assumptions.",
+    "No jurisdiction or regulatory ruleset has been selected."
+  ],
+  "engineVersion": "3.0.0"
+}
