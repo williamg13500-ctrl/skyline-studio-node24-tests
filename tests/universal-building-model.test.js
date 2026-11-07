@@ -103,7 +103,7 @@ test('universal building save and restore use owner-scoped immutable project rev
       s.queries.push({sql,args});
       if(sql.includes('FROM subscriptions'))return {rows:[{ok:1}]};
       if(sql.includes('WITH created')){s.saved={sql,args};return {rows:[{id:'12',version:1,revision:args[3]}]};}
-      if(sql.includes('FROM studio_revisions r JOIN studio_projects'))return {rows:s.stored?[s.stored]:[]};
+      if(sql.includes('FROM studio_revisions r JOIN studio_projects'))return {rows:s.stored&&args[1]==='user:owner-1'?[s.stored]:[]};
       return {rows:[]};
     }};`;
   globalThis.__universalApiTest=state;
@@ -126,6 +126,15 @@ test('universal building save and restore use owner-scoped immutable project rev
   assert.match(state.saved.sql,/owner_key/);
   assert.match(state.saved.sql,/INSERT INTO studio_revisions/);
   assert.equal(state.saved.args[0],'user:owner-1');
+  const conflict=response();
+  await projects({method:'POST',user:{id:'owner-1',email:'owner@example.test'},body:{
+    operation:{type:'universal-building-save'},id:'12',expectedVersion:99,brief:{name:'Tower concept'},geometry,revision
+  }},conflict);
+  assert.equal(conflict.code,409);
+  const update=state.queries.at(-1);
+  assert.match(update.sql,/WHERE id=\$4 AND owner_key=\$5 AND version=\$6/);
+  assert.equal(update.args[4],'user:owner-1');
+  assert.equal(update.args[5],99);
   state.stored={brief:{name:'Tower concept'},geometry,revision};
   const restored=response();
   await projects({method:'POST',user:{id:'owner-1',email:'owner@example.test'},body:{
@@ -134,6 +143,13 @@ test('universal building save and restore use owner-scoped immutable project rev
   assert.equal(restored.code,200);
   assert.equal(restored.body.reportMode,'universal_building_geometry_only');
   assert.equal(restored.body.geometry.floors.length,2);
+  assert.deepEqual(restored.body.geometry,geometry);
+  assert.equal(restored.body.revision,revision);
   assert.equal(restored.body.model,null);
   assert.equal(restored.body.validation.constructionExportAllowed,false);
+  const denied=response();
+  await projects({method:'POST',user:{id:'owner-2',email:'other@example.test'},body:{
+    operation:{type:'restore'},projectId:'12',version:1
+  }},denied);
+  assert.equal(denied.code,404);
 });
