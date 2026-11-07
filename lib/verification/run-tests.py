@@ -9,10 +9,16 @@ if major<24: raise SystemExit('Node.js 24 or newer is required.')
 bundle=json.loads(Path(__file__).with_name('source-tests.json').read_text())
 with tempfile.TemporaryDirectory(prefix='skyline-verification-') as work:
     work=Path(work)
-    for name in ['api','lib','public']:
-        shutil.copytree(root/name,work/name,ignore=shutil.ignore_patterns('__pycache__'))
+    for name in ['api','lib','public','tests']:
+        source=root/name
+        if source.exists():
+            shutil.copytree(source,work/name,ignore=shutil.ignore_patterns('__pycache__'))
     (work/'package.json').write_text('{"type":"module"}')
     for name,content in bundle.items():
         path=work/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(content)
-    result=subprocess.run(['node','--test',*sorted(bundle)],cwd=work)
+    command=['node','--test',*sorted(bundle)]
+    universal=work/'tests'/'universal-building-model.test.js'
+    if universal.exists():
+        command.append('tests/universal-building-model.test.js')
+    result=subprocess.run(command,cwd=work)
     raise SystemExit(result.returncode)
