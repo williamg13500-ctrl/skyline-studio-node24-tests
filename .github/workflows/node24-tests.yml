@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'snapshot/**'
+      - 'feature/**'
     paths:
       - 'api/**'
       - 'lib/**'
