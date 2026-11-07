@@ -90,3 +90,50 @@ test('missing coordinate frame and elevation evidence remain not_checked, not si
   assert.ok(result.issues.some(i=>i.code==='building_coordinate_frame_missing'));
   assert.ok(result.issues.some(i=>i.code==='floor_elevation_missing'));
 });
+
+import { registerHooks } from 'node:module';
+
+test('universal building save and restore use owner-scoped immutable project revisions without legacy renderer', async()=>{
+  const state={queries:[],saved:null,stored:null};
+  const hatchable=`const s=globalThis.__universalApiTest;
+    export const admin={check:async()=>false,profile:async()=>({handle:'test'})};
+    export const auth={getUser:async req=>req.user};
+    export const config={get:async()=> 'subscribers'};
+    export const db={query:async(sql,args)=>{
+      s.queries.push({sql,args});
+      if(sql.includes('FROM subscriptions'))return {rows:[{ok:1}]};
+      if(sql.includes('WITH created')){s.saved={sql,args};return {rows:[{id:'12',version:1,revision:args[3]}]};}
+      if(sql.includes('FROM studio_revisions r JOIN studio_projects'))return {rows:s.stored?[s.stored]:[]};
+      return {rows:[]};
+    }};`;
+  globalThis.__universalApiTest=state;
+  registerHooks({resolve(specifier,context,next){
+    if(specifier==='hatchable')return {url:'data:text/javascript,'+encodeURIComponent(hatchable),shortCircuit:true};
+    return next(specifier,context);
+  }});
+  const {default:projects}=await import('../api/studio/projects.js');
+  const {revisionFor}=await import('../lib/engine.js');
+  const base=createUniversalBuildingModel(legacy(),{id:'building-1',name:'Tower concept',coordinateFrameId:'origin'});
+  base.floors[0].elevation=0;
+  const geometry=duplicateBuildingFloor(base,'ground',{id:'level-1',label:'First Floor',elevationM:3.2,floorToFloorHeightM:3.2});
+  const revision=await revisionFor(geometry);
+  const response=()=>({code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(v){this.code=v;return this;},json(v){this.body=v;return this;}});
+  const saved=response();
+  await projects({method:'POST',user:{id:'owner-1',email:'owner@example.test'},body:{
+    operation:{type:'universal-building-save'},brief:{name:'Tower concept'},geometry,revision
+  }},saved);
+  assert.equal(saved.code,201);
+  assert.match(state.saved.sql,/owner_key/);
+  assert.match(state.saved.sql,/INSERT INTO studio_revisions/);
+  assert.equal(state.saved.args[0],'user:owner-1');
+  state.stored={brief:{name:'Tower concept'},geometry,revision};
+  const restored=response();
+  await projects({method:'POST',user:{id:'owner-1',email:'owner@example.test'},body:{
+    operation:{type:'restore'},projectId:'12',version:1
+  }},restored);
+  assert.equal(restored.code,200);
+  assert.equal(restored.body.reportMode,'universal_building_geometry_only');
+  assert.equal(restored.body.geometry.floors.length,2);
+  assert.equal(restored.body.model,null);
+  assert.equal(restored.body.validation.constructionExportAllowed,false);
+});
