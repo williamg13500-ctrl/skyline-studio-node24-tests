@@ -3,6 +3,7 @@ import {identify,requireBuild} from '../../lib/access.js';
 import {buildDraft,buildDraftFromGeometry,parseBrief,revisionFor,InputError} from '../../lib/engine.js';
 import {ownerKey,projectId,saveProject} from '../../lib/projects.js';
 import {applyGeometryEdit} from '../../lib/editor.js';
+import {createUniversalBuildingModel,validateUniversalBuildingModel} from '../../lib/universal-building-model.js';
 import {requestId,sendInputFailure,sendUnexpectedFailure} from '../../lib/http-errors.js';
 import {beginRequestLog} from '../../lib/request-logging.js';
 import {guardStudioRequest} from '../../lib/request-limits.js';
@@ -38,15 +39,35 @@ export default async function(req,res){
   if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
   const body=req.body||{};
   if(body.operation?.type==='restore'){
-   let geometry=body.geometry,brief=body.brief;
+   let geometry=body.geometry,brief=body.brief,storedRevision=null;
    if(body.projectId!==undefined&&body.version!==undefined){
     const id=projectId(body.projectId),version=Number(body.version);if(!id||!Number.isSafeInteger(version)||version<1)return res.status(400).json({error:'invalid_revision'});
     const stored=await db.query('SELECT r.brief,r.geometry,r.revision FROM studio_revisions r JOIN studio_projects p ON p.id=r.project_id WHERE p.id=$1 AND p.owner_key=$2 AND r.version=$3',[id,owner,version]);
-    if(!stored.rows.length)return res.status(404).json({error:'revision_not_found'});geometry=stored.rows[0].geometry;brief=stored.rows[0].brief;
+    if(!stored.rows.length)return res.status(404).json({error:'revision_not_found'});
+    geometry=stored.rows[0].geometry;brief=stored.rows[0].brief;storedRevision=stored.rows[0].revision;
+   }
+   if(geometry?.buildingModel?.schema==='skyline.universal-building'){
+    const report=validateUniversalBuildingModel(geometry);
+    if(report.status==='failed')return res.status(422).json({error:'universal_building_invalid',validation:report});
+    const revision=await revisionFor(geometry);
+    if((storedRevision&&storedRevision!==revision)||(body.projectId===undefined&&body.revision!==revision))return res.status(409).json({error:'stale_revision',message:'The saved universal building revision does not match its contents.'});
+    requestLog.addSummary({project_id:body.projectId??null,geometry_counts:{floors:geometry.floors.length},universal_model_status:report.status});
+    return res.json({brief,geometry,revision,validation:{...report,criticalCount:report.issues.filter(i=>i.severity==='critical').length,approval:'not_approved',constructionExportAllowed:false},plans:[],model:null,rows:[],reportMode:'universal_building_geometry_only',restoredFromRevision:storedRevision});
    }
    const restored=await buildDraftFromGeometry(geometry,brief);requestLog.addSummary({project_id:body.projectId??null,source_revision:body.revision??null,normalization_repair_count:restored.normalizationRepairs.length,normalization_repairs:restored.normalizationRepairs});
    if(body.projectId===undefined&&body.revision!==restored.revision)return res.status(409).json({error:'stale_revision',message:'The saved geometry revision does not match its contents.'});
    return res.json({...restored,restoredFromRevision:body.projectId===undefined?null:body.revision});
+  }
+  if(body.operation?.type==='universal-building-save'){
+   const geometry=body.geometry,report=validateUniversalBuildingModel(geometry);
+   if(report.status==='failed')return res.status(422).json({error:'universal_building_invalid',validation:report});
+   if(!geometry?.buildingModel||!body.brief||typeof body.brief.name!=='string'||!body.brief.name.trim())return res.status(400).json({error:'universal_building_metadata_required'});
+   const revision=await revisionFor(geometry);
+   if(body.revision!==revision)return res.status(409).json({error:'stale_revision',message:'The universal building changed. Recalculate its revision before saving.'});
+   const validation={...report,criticalCount:report.issues.filter(i=>i.severity==='critical').length,approval:'not_approved',constructionExportAllowed:false,engineVersion:'universal-building-v1'};
+   const result=await saveProject(owner,body,{brief:body.brief,geometry,revision,validation}),{status,...payload}=result;
+   requestLog.addSummary({project_id:body.id??null,geometry_counts:{floors:geometry.floors.length},universal_model_status:report.status});
+   return res.status(status).json(payload);
   }
   if(body.operation){
    const base=body.geometry?await buildDraftFromGeometry(body.geometry,body.brief):await buildDraft(body.brief);requestLog.addSummary({project_id:body.projectId??null,source_revision:body.sourceRevision??body.baseRevision??null,normalization_repair_count:base.normalizationRepairs.length,normalization_repairs:base.normalizationRepairs});
