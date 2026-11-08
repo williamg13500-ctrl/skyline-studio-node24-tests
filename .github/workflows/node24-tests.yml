@@ -62,10 +62,17 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          npm install --no-save --no-package-lock @playwright/test@1.55.0 &&
-            npx playwright install --with-deps chromium &&
-            npx playwright test 2>&1 | tee /tmp/skyline-browser-e2e.log
-          status=${PIPESTATUS[0]}
+          npm install --no-save --no-package-lock @playwright/test@1.55.0
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            npx playwright install --with-deps chromium
+            status=$?
+          fi
+          if [ "$status" -eq 0 ]; then
+            npx playwright test > /tmp/skyline-browser-e2e.log 2>&1
+            status=$?
+            cat /tmp/skyline-browser-e2e.log
+          fi
           echo "$status" > /tmp/skyline-browser-e2e.exit
           exit "$status"
 
