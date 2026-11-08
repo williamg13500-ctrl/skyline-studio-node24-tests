@@ -47,3 +47,11 @@ The preliminary site-fit search uses a grid spacing derived from recorded parcel
 The validator does not invent or infer legal parcel area minimums, maximum site area standards, slope acceptability, setback distances, easement widths, rights-of-way, hazard buffers, building coverage ratios, zoning envelopes or regulatory thresholds. Side/distance constraints are retained as evidence records and are not converted into setback geometry. Missing site data must not be interpreted as zero constraints.
 
 Any future change to a technical limit must update this document and its boundary-value tests in the same change. Any jurisdictional or engineering threshold must instead have an identified, applicable, dated source and qualified review before it is implemented as a rule.
+
+## Site-fit observation outputs
+
+The site-fit response reports the parcel's axis-aligned local x/y bounding-box dimensions together with the boundary evidence record. These dimensions are search references derived from the supplied polygon; they are not independently surveyed or legally certified dimensions.
+
+A supplied north bearing is retained with its evidence status as advisory metadata. Candidate rotations remain local-axis rotations; the system does not infer geographic orientation, solar exposure or daylight performance from the bearing.
+
+Access records with points receive a straight-line distance to each returned candidate footprint. This is proximity information only: access observations do not filter or rank candidates, and the result does not assess road geometry, gradients, turning, width, emergency access or route feasibility. Unverified observations remain visibly identified by their evidence status and are never promoted to hard constraints.
