@@ -86,7 +86,7 @@ jobs:
           tap_path = Path("/tmp/skyline-node-tests.tap")
           tap = tap_path.read_text(errors="replace") if tap_path.exists() else ""
           def metric(name):
-              match = re.search(r"^# " + re.escape(name) + r" (\d+)\\s*$", tap, re.M)
+              match = re.search(r"^# " + re.escape(name) + r" (\d+)\s*$", tap, re.M)
               return int(match.group(1)) if match else 0
 
           failures = []
