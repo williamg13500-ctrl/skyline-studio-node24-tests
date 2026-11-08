@@ -86,25 +86,25 @@ jobs:
           tap_path = Path("/tmp/skyline-node-tests.tap")
           tap = tap_path.read_text(errors="replace") if tap_path.exists() else ""
           def metric(name):
-              match = re.search(r"^# " + re.escape(name) + r" (\\d+)\\s*$", tap, re.M)
+              match = re.search(r"^# " + re.escape(name) + r" (\d+)\\s*$", tap, re.M)
               return int(match.group(1)) if match else 0
 
           failures = []
           lines = tap.splitlines()
           i = 0
           while i < len(lines):
-              match = re.match(r"^not ok \\d+ - (.+)$", lines[i])
+              match = re.match(r"^not ok \d+ - (.+)$", lines[i])
               if not match:
                   i += 1
                   continue
               name = match.group(1).strip()
               i += 1
               detail = []
-              while i < len(lines) and not re.match(r"^(?:ok|not ok) \\d+ - |^# (?:tests|pass|fail|skipped) ", lines[i]):
+              while i < len(lines) and not re.match(r"^(?:ok|not ok) \d+ - |^# (?:tests|pass|fail|skipped) ", lines[i]):
                   if lines[i].strip() not in ("---", "..."):
                       detail.append(lines[i].strip())
                   i += 1
-              failures.append({"name": name, "error": "\\n".join(x for x in detail if x) or "No TAP diagnostic text was emitted."})
+              failures.append({"name": name, "error": "\n".join(x for x in detail if x) or "No TAP diagnostic text was emitted."})
 
           test_exit = Path("/tmp/skyline-node-tests.exit")
           if not tap.strip():
@@ -125,7 +125,7 @@ jobs:
               "browser_e2e_result": browser_result,
               "run_url": f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
           }
-          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\\n")
+          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
           print(json.dumps(result, indent=2))
           PY
 
