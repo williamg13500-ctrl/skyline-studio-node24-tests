@@ -1,0 +1,12 @@
+{
+  "node_version": "v24.22.2",
+  "commit_hash": "6da8621c6a460e497670b92d5b7baf1789effd10",
+  "branch": "snapshot/hatchable-v64-source",
+  "total_tests": 0,
+  "pass": 0,
+  "fail": 0,
+  "skipped": 0,
+  "failing_tests": [],
+  "browser_e2e_result": "failed",
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/42489956057"
+}
