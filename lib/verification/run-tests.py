@@ -14,5 +14,5 @@ with tempfile.TemporaryDirectory(prefix='skyline-verification-') as work:
     (work/'package.json').write_text('{"type":"module"}')
     for name,content in bundle.items():
         path=work/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(content)
-    result=subprocess.run(['node','--test',*sorted(bundle)],cwd=work)
+    result=subprocess.run(['node','--test','--test-reporter=tap',*sorted(bundle)],cwd=work)
     raise SystemExit(result.returncode)
