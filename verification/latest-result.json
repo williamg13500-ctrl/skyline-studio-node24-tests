@@ -1,0 +1,50 @@
+{
+  "node_version": "v24.22.2",
+  "commit_hash": "4360d2e69755f277c58123bbd34d106334671660",
+  "branch": "scratch/ci-reporting-accuracy",
+  "test_exit_code": "1",
+  "test_result": "failed",
+  "total_tests": 166,
+  "pass": 158,
+  "fail": 8,
+  "skipped": 0,
+  "summary_valid": true,
+  "failing_tests": [
+    {
+      "name": "RECONSTRUCTED \u2014 service errors fail closed without leaking server details",
+      "error": "duration_ms: 4.751656\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/api.test.js:28:1'\nfailureType: 'testCodeFailure'\nerror: |-\nExpected values to be strictly equal:\n500 !== 503\ncode: 'ERR_ASSERTION'\nname: 'AssertionError'\nexpected: 503\nactual: 500\noperator: 'strictEqual'\nstack: |-\nTestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/api.test.js:29:139)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 export independently rebuilds and checks revision; browser status is ignored"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 admin AI provider test succeeds only after a real provider response",
+      "error": "duration_ms: 9.250171\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/api.test.js:163:1'\nfailureType: 'testCodeFailure'\nerror: \"The requested module 'hatchable' does not provide an export named 'api'\"\ncode: 'ERR_TEST_FAILURE'\nname: 'SyntaxError'\nstack: |-\n#asyncInstantiate (node:internal/modules/esm/module_job:455:21)\nasync ModuleJob.run (node:internal/modules/esm/module_job:553:5)\nasync node:internal/modules/esm/loader:647:26\nasync TestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/api.test.js:164:28)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 wall movement creates a new validated authoritative geometry revision"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 room edits preserve explicit open connections elsewhere in the plan",
+      "error": "duration_ms: 67.825068\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/editor.test.js:77:1'\nfailureType: 'testCodeFailure'\nerror: 'The new partition must leave at least 1.5 m on each side.'\ncode: 'ERR_TEST_FAILURE'\nstack: |-\nfail (file:///tmp/skyline-verification-hxv0aqu0/lib/editor.js:11:32)\nsplitRoom (file:///tmp/skyline-verification-hxv0aqu0/lib/editor.js:71:87)\napplyGeometryEdit (file:///tmp/skyline-verification-hxv0aqu0/lib/editor.js:239:60)\nTestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/editor.test.js:91:15)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 wall thickness and material survive JSON round-trip and change the authoritative revision"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 missing optional opening arrays are rejected as geometry validation, not a renderer exception",
+      "error": "duration_ms: 76.282956\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/geometry.test.js:91:1'\nfailureType: 'testCodeFailure'\nerror: |-\nThe validation function is expected to return \"true\". Received 'Edited geometry failed independent validation.'\nCaught error:\nError: Check the project brief.\ncode: 'ERR_ASSERTION'\nname: 'AssertionError'\nstack: |-\nasync TestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/geometry.test.js:94:2)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 opening and editing a legacy geometry repairs a copy and leaves the source revision untouched"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 SVG wall lines contain exactly one stroke attribute",
+      "error": "duration_ms: 34.727287\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/geometry.test.js:157:1'\nfailureType: 'testCodeFailure'\nerror: |-\n<line x1=\"0\" y1=\"-1\" x2=\"10\" y2=\"-1\"/>\n0 !== 1\ncode: 'ERR_ASSERTION'\nname: 'AssertionError'\nexpected: 1\nactual: 0\noperator: 'strictEqual'\nstack: |-\nTestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/geometry.test.js:160:33)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 complete supported AI brief requires explicit confirmation"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 professional limitations remain explicit even when geometric and room-fit checks pass",
+      "error": "duration_ms: 42.782772\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/multistorey.test.js:19:1'\nfailureType: 'testCodeFailure'\nerror: |-\nExpected values to be strictly equal:\n+ actual - expected\n+ 'not_applicable'\n- 'not_checked'\n^\ncode: 'ERR_ASSERTION'\nname: 'AssertionError'\nexpected: 'not_checked'\nactual: 'not_applicable'\noperator: 'strictEqual'\nstack: |-\nTestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/multistorey.test.js:19:294)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 3D furniture extents equal authoritative footprint coordinates"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 adjacent boundary backtracking and overlapping edges are rejected",
+      "error": "duration_ms: 1.055276\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/site-intelligence.test.js:22:1'\nfailureType: 'testCodeFailure'\nerror: |-\nThe validation function is expected to return \"true\". Received false\nCaught error:\nSiteInputError: Adjacent boundary edges overlap by reversing direction. Remove the backtracking point.\ncode: 'ERR_ASSERTION'\nname: 'AssertionError'\nstack: |-\nfails (file:///tmp/skyline-verification-hxv0aqu0/tests/site-intelligence.test.js:6:33)\nTestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/site-intelligence.test.js:23:2)\nTest.runInAsyncScope (node:async_hooks:227:14)\nTest.run (node:internal/test_runner/test:1402:25)\nTest.processPendingSubtests (node:internal/test_runner/test:974:18)\nTest.postRun (node:internal/test_runner/test:1542:19)\nTest.run (node:internal/test_runner/test:1467:12)\nasync Test.processPendingSubtests (node:internal/test_runner/test:974:7)\n# Subtest: RECONSTRUCTED \u2014 self-intersecting parcel boundaries are rejected"
+    },
+    {
+      "name": "RECONSTRUCTED \u2014 successful generation displays revision report, rooms and matching views",
+      "error": "duration_ms: 66.067119\ntype: 'test'\nlocation: '/tmp/skyline-verification-hxv0aqu0/tests/ui.test.js:20:1'\nfailureType: 'testCodeFailure'\nerror: |-\nThe expression evaluated to a falsy value:\nassert.ok(ui.el('validation').innerHTML.includes('not checked'))\ncode: 'ERR_ASSERTION'\nname: 'AssertionError'\nexpected: true\nactual: false\noperator: '=='\nstack: |-\nTestContext.<anonymous> (file:///tmp/skyline-verification-hxv0aqu0/tests/ui.test.js:24:9)\nasync Test.run (node:internal/test_runner/test:1409:7)\nasync startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)\n# Subtest: RECONSTRUCTED \u2014 editing while a request is pending prevents stale results from returning"
+    }
+  ],
+  "browser_exit_code": "1",
+  "browser_e2e_result": "failed",
+  "overall_status": "failed",
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/42575201583"
+}
