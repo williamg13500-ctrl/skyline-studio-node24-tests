@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'snapshot/**'
+      - 'scratch/**'
     paths:
       - 'api/**'
       - 'lib/**'
@@ -114,22 +115,37 @@ jobs:
               failures.append({"name": name, "error": "\n".join(x for x in detail if x) or "No TAP diagnostic text was emitted."})
 
           test_exit = Path("/tmp/skyline-node-tests.exit")
-          if not tap.strip():
-              failures.append({"name": "test-runner", "error": "The test runner produced no TAP output; inspect the workflow log."})
+          test_code = test_exit.read_text().strip() if test_exit.exists() else None
           browser_exit = Path("/tmp/skyline-browser-e2e.exit")
           browser_code = browser_exit.read_text().strip() if browser_exit.exists() else None
+          total = metric("tests")
+          passed = metric("pass")
+          failed = metric("fail")
+          skipped = metric("skipped")
+          summary_valid = total > 0 and passed + failed + skipped == total
+          if not tap.strip():
+              failures.append({"name": "test-runner", "error": "The test runner produced no TAP output; inspect the workflow log."})
+          if not summary_valid:
+              failures.append({"name": "test-summary", "error": "TAP summary is missing or internally inconsistent."})
+          test_result = "passed" if test_code == "0" and summary_valid else ("failed" if test_code is not None else "not_run")
           browser_result = "passed" if browser_code == "0" else ("failed" if browser_code is not None else "not_run")
+          overall_status = "passed" if test_result == "passed" and browser_result == "passed" else ("failed" if "failed" in (test_result, browser_result) else "incomplete")
           node_version = subprocess.check_output(["node", "--version"], text=True).strip()
           result = {
               "node_version": node_version,
               "commit_hash": os.environ["GITHUB_SHA"],
               "branch": os.environ["GITHUB_REF_NAME"],
-              "total_tests": metric("tests"),
-              "pass": metric("pass"),
-              "fail": metric("fail"),
-              "skipped": metric("skipped"),
+              "test_exit_code": test_code,
+              "test_result": test_result,
+              "total_tests": total,
+              "pass": passed,
+              "fail": failed,
+              "skipped": skipped,
+              "summary_valid": summary_valid,
               "failing_tests": failures,
+              "browser_exit_code": browser_code,
               "browser_e2e_result": browser_result,
+              "overall_status": overall_status,
               "run_url": f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
           }
           Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -152,3 +168,27 @@ jobs:
           git commit -m "Record Node 24 verification for ${GITHUB_REF_NAME}"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
             push origin "HEAD:refs/heads/$RESULT_BRANCH"
+      - name: Enforce verification gates
+        if: always()
+        shell: bash
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$TEST_OUTCOME" != "success" || "$BROWSER_OUTCOME" != "success" ]]; then
+            echo "::error::Verification failed: source tests outcome=$TEST_OUTCOME; browser E2E outcome=$BROWSER_OUTCOME."
+            exit 1
+          fi
+          if [ ! -s /tmp/latest-result.json ]; then
+            echo "::error::Machine-readable verification result is missing."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          result = json.loads(Path("/tmp/latest-result.json").read_text())
+          if result.get("overall_status") != "passed" or not result.get("summary_valid"):
+              print("::error::Verification result did not pass both gates.")
+              sys.exit(1)
+          PY
