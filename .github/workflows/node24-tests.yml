@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - 'scratch/**'
+      - 'fix/**'
       - 'snapshot/**'
     paths:
       - 'api/**'
