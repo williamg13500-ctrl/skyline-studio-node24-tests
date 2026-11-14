@@ -87,10 +87,10 @@ jobs:
           log = log_path.read_text(errors="replace") if log_path.exists() else ""
           counts = {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
           for key, pattern in {
-              "total": r"^# tests (\\d+)$",
-              "passed": r"^# pass (\\d+)$",
-              "failed": r"^# fail (\\d+)$",
-              "skipped": r"^# skipped (\\d+)$"
+              "total": r"^# tests (\d+)$",
+              "passed": r"^# pass (\d+)$",
+              "failed": r"^# fail (\d+)$",
+              "skipped": r"^# skipped (\d+)$"
           }.items():
               m = re.search(pattern, log, re.M)
               if m: counts[key] = int(m.group(1))
@@ -103,7 +103,7 @@ jobs:
                   for candidate in lines[i+1:i+20]:
                       if candidate.startswith(("ok ", "not ok ", "# tests ")): break
                       if candidate.strip(): detail.append(candidate.strip())
-                  error = "\\n".join(detail) or line
+                  error = "\n".join(detail) or line
                   classification = "missing_file" if re.search(r"(No such file|FileNotFoundError|cannot find|ENOENT)", error, re.I) else "code_bug"
                   failures.append({"name": name, "error": error, "classification": classification})
           if missing:
@@ -130,7 +130,7 @@ jobs:
               "browser_e2e_error": browser_log[-12000:] if browser_status == "failed" else None,
               "run_url": f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
           }
-          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\\n")
+          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
           print(json.dumps(result, indent=2))
           PY
           BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
