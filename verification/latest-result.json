@@ -1,0 +1,33 @@
+{
+  "node_version": "v24.22.2",
+  "python_version": "Python 3.15.2",
+  "commit_hash": "20f78b271aaa83388c151b7a5230273f81205609",
+  "branch": "scratch/v66-ci-result-reporting",
+  "test_status": "not_run_missing_files",
+  "test_counts": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "failing_tests": [
+    {
+      "name": "V66 source snapshot incomplete",
+      "error": "Unavailable V66 manifest files: public/studio.html, public/studio.js, lib/validation.js, README.md, lib/verification/source-tests.json, lib/site-intelligence.js, lib/site-fit.js, lib/verification/multistorey-release-gates.md",
+      "classification": "missing_file"
+    }
+  ],
+  "missing_v66_manifest_files": [
+    "public/studio.html",
+    "public/studio.js",
+    "lib/validation.js",
+    "README.md",
+    "lib/verification/source-tests.json",
+    "lib/site-intelligence.js",
+    "lib/site-fit.js",
+    "lib/verification/multistorey-release-gates.md"
+  ],
+  "browser_e2e_result": "not_run_missing_files",
+  "browser_e2e_error": null,
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/43645349082"
+}\n
