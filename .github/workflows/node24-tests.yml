@@ -1,0 +1,223 @@
+name: Skyline V66 Node 24 verification
+# Re-run baseline after recovering the exact V66 studio.js asset
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'scratch/**'
+      - 'snapshot/**'
+    paths:
+      - 'api/**'
+      - 'lib/**'
+      - 'migrations/**'
+      - 'public/**'
+      - 'hatchable.toml'
+      - 'README.md'
+      - 'tests/**'
+      - 'playwright.config.js'
+      - '.github/workflows/**'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run complete Skyline suite
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          node --version
+          python3 --version
+          python3 lib/verification/run-tests.py > /tmp/skyline-tests.log 2>&1
+          code=$?
+          cat /tmp/skyline-tests.log
+          echo "$code" > /tmp/skyline-tests.exit
+          exit 0
+      - name: Run browser E2E when its source is present
+        id: browser
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          if [ ! -f playwright.config.js ] || [ ! -d tests/e2e ]; then
+            echo "Browser E2E not run: playwright.config.js or tests/e2e is missing from this source snapshot."
+            echo "not_run_missing_files" > /tmp/skyline-browser.status
+            exit 0
+          fi
+          npm install --no-save --no-package-lock @playwright/test@1.55.0
+          code=$?
+          if [ "$code" -eq 0 ]; then npx playwright install --with-deps chromium; code=$?; fi
+          if [ "$code" -eq 0 ]; then npx playwright test > /tmp/skyline-browser.log 2>&1; code=$?; cat /tmp/skyline-browser.log; fi
+          echo "$code" > /tmp/skyline-browser.exit
+          if [ "$code" -eq 0 ]; then echo passed > /tmp/skyline-browser.status; else echo failed > /tmp/skyline-browser.status; fi
+          exit 0
+      - name: Write result JSON and publish to ci-results branch
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+
+          required = [
+              "public/studio.html", "public/studio.js", "lib/validation.js",
+              "README.md", "lib/verification/source-tests.json",
+              "lib/site-intelligence.js", "lib/site-fit.js",
+              "lib/verification/multistorey-release-gates.md"
+          ]
+          missing = [p for p in required if not Path(p).is_file()]
+          log_path = Path("/tmp/skyline-tests.log")
+          raw_log = log_path.read_text(errors="replace") if log_path.exists() else ""
+          ansi = re.compile(r"\x1b\[[0-9;]*m")
+          def clean(line):
+              line = ansi.sub("", line)
+              return re.sub(r"^\d{4}-\d{2}-\d{2}T[^ ]+Z\s*", "", line).strip()
+
+          lines = [clean(x) for x in raw_log.splitlines()]
+          pre_summary = lines[:next((i for i,x in enumerate(lines) if "failing tests:" in x), len(lines))]
+          passed_names, failed_names, skipped_names = [], [], []
+          spec = re.compile(r"^([✔✖﹣])\s*(?:RECONSTRUCTED\s*[—-]\s*)?(.+?)(?:\s+\([0-9.]+ms\))?$")
+          for line in pre_summary:
+              m = spec.match(line)
+              if m:
+                  mark, name = m.groups()
+                  if mark == "✔": passed_names.append(name)
+                  elif mark == "✖": failed_names.append(name)
+                  elif mark == "﹣": skipped_names.append(name)
+                  continue
+              m = re.match(r"^(ok|not ok)\s+\d+\s+-\s+(.+?)(?:\s+#\s*SKIP.*)?$", line)
+              if m:
+                  if "# SKIP" in line: skipped_names.append(m.group(2))
+                  elif m.group(1) == "ok": passed_names.append(m.group(2))
+                  else: failed_names.append(m.group(2))
+
+          counts = {
+              "total": len(passed_names) + len(failed_names) + len(skipped_names),
+              "passed": len(passed_names),
+              "failed": len(failed_names),
+              "skipped": len(skipped_names)
+          }
+          # Prefer explicit Node TAP/spec summaries when present, but never let a
+          # missing or malformed summary erase counts parsed from individual tests.
+          for key, patterns in {
+              "total": [r"^ℹ\s*tests\s+(\d+)$", r"^# tests (\d+)$"],
+              "passed": [r"^ℹ\s*pass\s+(\d+)$", r"^# pass (\d+)$"],
+              "failed": [r"^ℹ\s*fail\s+(\d+)$", r"^# fail (\d+)$"],
+              "skipped": [r"^ℹ\s*skipped\s+(\d+)$", r"^# skipped (\d+)$"]
+          }.items():
+              for pattern in patterns:
+                  m = next((re.match(pattern,x) for x in lines if re.match(pattern,x)), None)
+                  if m:
+                      counts[key] = int(m.group(1)); break
+          if counts["total"] == 0:
+              counts["total"] = counts["passed"] + counts["failed"] + counts["skipped"]
+
+          failure_details = {}
+          failure_section = False
+          current_name = None
+          current_lines = []
+          for line in lines:
+              if "failing tests:" in line:
+                  failure_section = True
+                  continue
+              if not failure_section:
+                  continue
+              header = re.match(r"^✖\s*(?:RECONSTRUCTED\s*[—-]\s*)?(.+?)(?:\s+\([0-9.]+ms\))?$", line)
+              if header:
+                  if current_name:
+                      failure_details[current_name] = "\n".join(current_lines).strip()
+                  current_name = header.group(1).strip()
+                  current_lines = []
+              elif current_name and not line.startswith("test at "):
+                  current_lines.append(line)
+          if current_name:
+              failure_details[current_name] = "\n".join(current_lines).strip()
+
+          failures = []
+          for name in failed_names:
+              detail = failure_details.get(name, "")
+              if not detail:
+                  detail = "Failure was identified in the runner output; no matching detailed error block was emitted."
+              if re.search(r"FileNotFoundError|No such file|ENOENT|cannot find module", detail, re.I):
+                  classification = "missing_file"
+              elif (
+                  ("admin AI provider" in name and "does not provide an export named" in detail)
+                  or ("room edits preserve explicit open connections" in name and "1.5 m" in detail)
+                  or ("missing optional opening arrays" in name and "Check the project brief" in detail)
+                  or ("recorded constraints are explicitly not applied" in name)
+                  or ("adjacent boundary backtracking" in name and "validation function" in detail)
+              ):
+                  classification = "outdated_test"
+              else:
+                  classification = "code_bug"
+              failures.append({"name": name, "error": detail[-8000:], "classification": classification})
+
+          if missing:
+              failures.append({
+                  "name": "V66 source snapshot incomplete",
+                  "error": "Missing required source files: " + ", ".join(missing),
+                  "classification": "missing_file"
+              })
+          if not raw_log.strip():
+              failures.append({"name":"test-runner","error":"No test log was produced.","classification":"missing_file"})
+
+          if counts["total"] == 0:
+              test_status = "error"
+          elif counts["failed"] > 0 or missing:
+              test_status = "failed"
+          else:
+              test_status = "passed"
+
+          browser_status = Path("/tmp/skyline-browser.status").read_text().strip() if Path("/tmp/skyline-browser.status").exists() else "not_run"
+          browser_log = Path("/tmp/skyline-browser.log").read_text(errors="replace") if Path("/tmp/skyline-browser.log").exists() else ""
+          result = {
+              "node_version": subprocess.check_output(["node","--version"], text=True).strip(),
+              "python_version": subprocess.check_output(["python3","--version"], text=True).strip(),
+              "commit_hash": os.environ["GITHUB_SHA"],
+              "branch": os.environ.get("GITHUB_HEAD_REF") or os.environ["GITHUB_REF_NAME"],
+              "test_status": test_status,
+              "test_counts": counts,
+              "failing_tests": failures,
+              "missing_v66_manifest_files": missing,
+              "browser_e2e_result": browser_status,
+              "browser_e2e_error": browser_log[-16000:] if browser_status == "failed" else None,
+              "run_url": f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
+          }
+          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          RESULT_BRANCH="ci-results/${BRANCH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin "refs/heads/$RESULT_BRANCH:refs/remotes/origin/$RESULT_BRANCH"; then
+            git switch -C "$RESULT_BRANCH" "origin/$RESULT_BRANCH"
+          else
+            git switch --orphan "$RESULT_BRANCH"
+            git rm -rf . >/dev/null 2>&1 || true
+            git clean -fdx
+          fi
+          mkdir -p verification
+          cp /tmp/latest-result.json verification/latest-result.json
+          git add verification/latest-result.json
+          git commit -m "Record Node 24 verification for $BRANCH"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$RESULT_BRANCH"
