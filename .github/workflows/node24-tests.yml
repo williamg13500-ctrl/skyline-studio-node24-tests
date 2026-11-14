@@ -180,10 +180,17 @@ jobs:
           if not raw_log.strip():
               failures.append({"name":"test-runner","error":"No test log was produced.","classification":"missing_file"})
 
-          if counts["total"] == 0:
+          exit_path = Path("/tmp/skyline-tests.exit")
+          try:
+              test_exit_code = int(exit_path.read_text().strip()) if exit_path.exists() else None
+          except ValueError:
+              test_exit_code = None
+          if counts["total"] == 0 or test_exit_code is None:
               test_status = "error"
-          elif counts["failed"] > 0 or missing:
+          elif counts["failed"] > 0 or missing or test_exit_code != 0:
               test_status = "failed"
+              if test_exit_code != 0 and counts["failed"] == 0:
+                  failures.append({"name":"test-runner-exit","error":f"Runner exited {test_exit_code}, but no individual failing test was parsed. Treating this as a failed verification, not a pass.","classification":"code_bug"})
           else:
               test_status = "passed"
 
@@ -195,6 +202,7 @@ jobs:
               "commit_hash": os.environ["GITHUB_SHA"],
               "branch": os.environ.get("GITHUB_HEAD_REF") or os.environ["GITHUB_REF_NAME"],
               "test_status": test_status,
+              "test_exit_code": test_exit_code,
               "test_counts": counts,
               "failing_tests": failures,
               "missing_v66_manifest_files": missing,
@@ -221,5 +229,3 @@ jobs:
           git add verification/latest-result.json
           git commit -m "Record Node 24 verification for $BRANCH"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$RESULT_BRANCH"
-
-# Trigger a clean Node 24 verification after exact-hash V66 source recovery.
