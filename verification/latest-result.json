@@ -1,0 +1,18 @@
+{
+  "node_version": "v24.22.2",
+  "python_version": "Python 3.15.2",
+  "commit_hash": "78d84fb941a73800b3b2e013e28ca4540d7f7ce3",
+  "branch": "snapshot/hatchable-workspace-current",
+  "test_status": "passed",
+  "test_counts": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "failing_tests": [],
+  "missing_v66_manifest_files": [],
+  "browser_e2e_result": "not_run_missing_files",
+  "browser_e2e_error": null,
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/43648078762"
+}
