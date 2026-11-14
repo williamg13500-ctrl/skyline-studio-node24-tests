@@ -12,3 +12,5 @@ module.exports = defineConfig({
     timeout: 30000
   }
 });
+
+// Browser E2E source is test-only; it is not part of the V66 deployment manifest.
