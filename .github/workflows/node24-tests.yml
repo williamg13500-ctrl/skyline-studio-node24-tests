@@ -87,15 +87,15 @@ jobs:
           missing = [p for p in required if not Path(p).is_file()]
           log_path = Path("/tmp/skyline-tests.log")
           raw_log = log_path.read_text(errors="replace") if log_path.exists() else ""
-          ansi = re.compile(r"\\x1b\\[[0-9;]*m")
+          ansi = re.compile(r"\x1b\[[0-9;]*m")
           def clean(line):
               line = ansi.sub("", line)
-              return re.sub(r"^\\d{4}-\\d{2}-\\d{2}T[^ ]+Z\\s*", "", line).strip()
+              return re.sub(r"^\d{4}-\d{2}-\d{2}T[^ ]+Z\s*", "", line).strip()
 
           lines = [clean(x) for x in raw_log.splitlines()]
           pre_summary = lines[:next((i for i,x in enumerate(lines) if "failing tests:" in x), len(lines))]
           passed_names, failed_names, skipped_names = [], [], []
-          spec = re.compile(r"^([✔✖﹣])\\s*(?:RECONSTRUCTED\\s*[—-]\\s*)?(.+?)(?:\\s+\\([0-9.]+ms\\))?$")
+          spec = re.compile(r"^([✔✖﹣])\s*(?:RECONSTRUCTED\s*[—-]\s*)?(.+?)(?:\s+\([0-9.]+ms\))?$")
           for line in pre_summary:
               m = spec.match(line)
               if m:
@@ -104,7 +104,7 @@ jobs:
                   elif mark == "✖": failed_names.append(name)
                   elif mark == "﹣": skipped_names.append(name)
                   continue
-              m = re.match(r"^(ok|not ok)\\s+\\d+\\s+-\\s+(.+?)(?:\\s+#\\s*SKIP.*)?$", line)
+              m = re.match(r"^(ok|not ok)\s+\d+\s+-\s+(.+?)(?:\s+#\s*SKIP.*)?$", line)
               if m:
                   if "# SKIP" in line: skipped_names.append(m.group(2))
                   elif m.group(1) == "ok": passed_names.append(m.group(2))
@@ -119,10 +119,10 @@ jobs:
           # Prefer explicit Node TAP/spec summaries when present, but never let a
           # missing or malformed summary erase counts parsed from individual tests.
           for key, patterns in {
-              "total": [r"^ℹ\\s*tests\\s+(\\d+)$", r"^# tests (\\d+)$"],
-              "passed": [r"^ℹ\\s*pass\\s+(\\d+)$", r"^# pass (\\d+)$"],
-              "failed": [r"^ℹ\\s*fail\\s+(\\d+)$", r"^# fail (\\d+)$"],
-              "skipped": [r"^ℹ\\s*skipped\\s+(\\d+)$", r"^# skipped (\\d+)$"]
+              "total": [r"^ℹ\s*tests\s+(\d+)$", r"^# tests (\d+)$"],
+              "passed": [r"^ℹ\s*pass\s+(\d+)$", r"^# pass (\d+)$"],
+              "failed": [r"^ℹ\s*fail\s+(\d+)$", r"^# fail (\d+)$"],
+              "skipped": [r"^ℹ\s*skipped\s+(\d+)$", r"^# skipped (\d+)$"]
           }.items():
               for pattern in patterns:
                   m = next((re.match(pattern,x) for x in lines if re.match(pattern,x)), None)
@@ -141,16 +141,16 @@ jobs:
                   continue
               if not failure_section:
                   continue
-              header = re.match(r"^✖\\s*(?:RECONSTRUCTED\\s*[—-]\\s*)?(.+?)(?:\\s+\\([0-9.]+ms\\))?$", line)
+              header = re.match(r"^✖\s*(?:RECONSTRUCTED\s*[—-]\s*)?(.+?)(?:\s+\([0-9.]+ms\))?$", line)
               if header:
                   if current_name:
-                      failure_details[current_name] = "\\n".join(current_lines).strip()
+                      failure_details[current_name] = "\n".join(current_lines).strip()
                   current_name = header.group(1).strip()
                   current_lines = []
               elif current_name and not line.startswith("test at "):
                   current_lines.append(line)
           if current_name:
-              failure_details[current_name] = "\\n".join(current_lines).strip()
+              failure_details[current_name] = "\n".join(current_lines).strip()
 
           failures = []
           for name in failed_names:
@@ -202,9 +202,9 @@ jobs:
               "browser_e2e_error": browser_log[-16000:] if browser_status == "failed" else None,
               "run_url": f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
           }
-          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\\n")
+          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
           print(json.dumps(result, indent=2))
-          PYY
+          PY
           BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
           RESULT_BRANCH="ci-results/${BRANCH}"
           git config user.name "github-actions[bot]"
