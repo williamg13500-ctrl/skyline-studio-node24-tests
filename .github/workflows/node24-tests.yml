@@ -1,0 +1,152 @@
+name: Skyline V66 Node 24 verification
+# Re-run baseline after recovering the exact V66 studio.js asset
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'scratch/**'
+      - 'snapshot/**'
+    paths:
+      - 'api/**'
+      - 'lib/**'
+      - 'migrations/**'
+      - 'public/**'
+      - 'hatchable.toml'
+      - 'README.md'
+      - 'tests/**'
+      - 'playwright.config.js'
+      - '.github/workflows/**'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run complete Skyline suite
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          node --version
+          python3 --version
+          python3 lib/verification/run-tests.py > /tmp/skyline-tests.log 2>&1
+          code=$?
+          cat /tmp/skyline-tests.log
+          echo "$code" > /tmp/skyline-tests.exit
+          exit 0
+      - name: Run browser E2E when its source is present
+        id: browser
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          if [ ! -f playwright.config.js ] || [ ! -d tests/e2e ]; then
+            echo "Browser E2E not run: playwright.config.js or tests/e2e is missing from this source snapshot."
+            echo "not_run_missing_files" > /tmp/skyline-browser.status
+            exit 0
+          fi
+          npm install --no-save --no-package-lock @playwright/test@1.55.0
+          code=$?
+          if [ "$code" -eq 0 ]; then npx playwright install --with-deps chromium; code=$?; fi
+          if [ "$code" -eq 0 ]; then npx playwright test > /tmp/skyline-browser.log 2>&1; code=$?; cat /tmp/skyline-browser.log; fi
+          echo "$code" > /tmp/skyline-browser.exit
+          if [ "$code" -eq 0 ]; then echo passed > /tmp/skyline-browser.status; else echo failed > /tmp/skyline-browser.status; fi
+          exit 0
+      - name: Write result JSON and publish to ci-results branch
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+
+          missing = [p for p in [
+              "public/studio.html", "public/studio.js", "lib/validation.js",
+              "README.md", "lib/verification/source-tests.json",
+              "lib/site-intelligence.js", "lib/site-fit.js",
+              "lib/verification/multistorey-release-gates.md"
+          ] if not Path(p).is_file()]
+          log_path = Path("/tmp/skyline-tests.log")
+          log = log_path.read_text(errors="replace") if log_path.exists() else ""
+          counts = {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+          for key, pattern in {
+              "total": r"^# tests (\d+)$",
+              "passed": r"^# pass (\d+)$",
+              "failed": r"^# fail (\d+)$",
+              "skipped": r"^# skipped (\d+)$"
+          }.items():
+              m = re.search(pattern, log, re.M)
+              if m: counts[key] = int(m.group(1))
+          failures = []
+          lines = log.splitlines()
+          for i, line in enumerate(lines):
+              if line.startswith("not ok "):
+                  name = line.split(" - ", 1)[-1]
+                  detail = []
+                  for candidate in lines[i+1:i+20]:
+                      if candidate.startswith(("ok ", "not ok ", "# tests ")): break
+                      if candidate.strip(): detail.append(candidate.strip())
+                  error = "\n".join(detail) or line
+                  classification = "missing_file" if re.search(r"(No such file|FileNotFoundError|cannot find|ENOENT)", error, re.I) else "code_bug"
+                  failures.append({"name": name, "error": error, "classification": classification})
+          if missing:
+              failures.append({
+                  "name": "V66 source snapshot incomplete",
+                  "error": "Unavailable V66 manifest files: " + ", ".join(missing),
+                  "classification": "missing_file"
+              })
+          if not log.strip():
+              failures.append({"name":"test-runner","error":"No test log was produced.","classification":"missing_file"})
+          test_status = "passed" if counts["failed"] == 0 and not missing and log.strip() else ("not_run_missing_files" if missing else "failed")
+          browser_status = Path("/tmp/skyline-browser.status").read_text().strip() if Path("/tmp/skyline-browser.status").exists() else "not_run"
+          browser_log = Path("/tmp/skyline-browser.log").read_text(errors="replace") if Path("/tmp/skyline-browser.log").exists() else ""
+          result = {
+              "node_version": subprocess.check_output(["node","--version"], text=True).strip(),
+              "python_version": subprocess.check_output(["python3","--version"], text=True).strip(),
+              "commit_hash": os.environ["GITHUB_SHA"],
+              "branch": os.environ.get("GITHUB_HEAD_REF") or os.environ["GITHUB_REF_NAME"],
+              "test_status": test_status,
+              "test_counts": counts,
+              "failing_tests": failures,
+              "missing_v66_manifest_files": missing,
+              "browser_e2e_result": browser_status,
+              "browser_e2e_error": browser_log[-12000:] if browser_status == "failed" else None,
+              "run_url": f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
+          }
+          Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          RESULT_BRANCH="ci-results/${BRANCH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin "refs/heads/$RESULT_BRANCH:refs/remotes/origin/$RESULT_BRANCH"; then
+            git switch -C "$RESULT_BRANCH" "origin/$RESULT_BRANCH"
+          else
+            git switch --orphan "$RESULT_BRANCH"
+            git rm -rf . >/dev/null 2>&1 || true
+            git clean -fdx
+          fi
+          mkdir -p verification
+          cp /tmp/latest-result.json verification/latest-result.json
+          git add verification/latest-result.json
+          git commit -m "Record Node 24 verification for $BRANCH"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$RESULT_BRANCH"
