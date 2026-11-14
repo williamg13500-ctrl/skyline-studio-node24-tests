@@ -1,9 +1,10 @@
 {
   "node_version": "v24.22.2",
   "python_version": "Python 3.15.2",
-  "commit_hash": "5e4a3a7d44fa7dbab51525d46f77239000f5e0ef",
+  "commit_hash": "792f54f5251276bda066b7f8ca0e8e2fea4f93c7",
   "branch": "scratch/v66-ci-result-reporting",
   "test_status": "error",
+  "test_exit_code": 1,
   "test_counts": {
     "total": 0,
     "passed": 0,
@@ -28,5 +29,5 @@
   ],
   "browser_e2e_result": "not_run_missing_files",
   "browser_e2e_error": null,
-  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/43649474349"
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/43649862461"
 }
