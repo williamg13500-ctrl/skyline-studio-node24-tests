@@ -150,3 +150,5 @@ jobs:
           git add verification/latest-result.json
           git commit -m "Record Node 24 verification for $BRANCH"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$RESULT_BRANCH"
+
+# Trigger Node 24 verification for the attached workspace source ZIP baseline.
