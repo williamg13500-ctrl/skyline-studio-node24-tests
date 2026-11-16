@@ -1,0 +1,104 @@
+name: Skyline isolated Node 24 verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/v66-test-failures
+    paths:
+      - lib/validation.js
+      - lib/verification/source-tests.json
+      - .github/workflows/v66-node24-tests.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run suite and publish result file
+        shell: bash
+        run: |
+          set -u
+          node --version
+          python3 --version
+          set +e
+          python3 lib/verification/run-tests.py > "$RUNNER_TEMP/skyline-tests.log" 2>&1
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/skyline-tests.log"
+          python3 - "$code" "$RUNNER_TEMP/skyline-tests.log" "$RUNNER_TEMP/latest-result.json" <<'PY'
+          import json, re, subprocess, sys
+          from pathlib import Path
+
+          code = int(sys.argv[1])
+          log = Path(sys.argv[2]).read_text(errors="replace")
+          clean = re.compile(r"\x1b\[[0-9;]*m")
+          lines = [clean.sub("", line).strip() for line in log.splitlines()]
+          counts = {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+          patterns = {
+              "total": r"^ℹ\s*tests\s+(\d+)$",
+              "passed": r"^ℹ\s*pass\s+(\d+)$",
+              "failed": r"^ℹ\s*fail\s+(\d+)$",
+              "skipped": r"^ℹ\s*skipped\s+(\d+)$"
+          }
+          for key, pattern in patterns.items():
+              found = [re.match(pattern, line) for line in lines]
+              found = [m for m in found if m]
+              if found:
+                  counts[key] = int(found[-1].group(1))
+          failed = []
+          for line in lines:
+              m = re.match(r"^✖\s*(.+?)(?:\s+\([0-9.]+ms\))?$", line)
+              if m:
+                  failed.append(m.group(1))
+              m = re.match(r"^not ok\s+\d+\s+-\s+(.+)$", line)
+              if m:
+                  failed.append(m.group(1))
+          if counts["total"] == 0:
+              status = "error"
+          elif code != 0 or counts["failed"] > 0:
+              status = "failed"
+          else:
+              status = "passed"
+          result = {
+              "node_version": subprocess.check_output(["node", "--version"], text=True).strip(),
+              "python_version": subprocess.check_output(["python3", "--version"], text=True).strip(),
+              "commit_hash": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "branch": "fix/v66-test-failures",
+              "test_status": status,
+              "test_exit_code": code,
+              "test_counts": counts,
+              "failing_tests": [{"name": name} for name in failed],
+              "browser_e2e_result": "not_run_out_of_scope"
+          }
+          Path(sys.argv[3]).write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+          cp "$RUNNER_TEMP/latest-result.json" "$RUNNER_TEMP/result-to-publish.json"
+          result_branch="ci-results/fix/v66-test-failures"
+          git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
+          git switch -C "$result_branch" "origin/$result_branch"
+          mkdir -p verification
+          cp "$RUNNER_TEMP/result-to-publish.json" verification/latest-result.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add verification/latest-result.json
+          git commit -m "Record isolated Node 24 verification result"
+          git push origin "HEAD:refs/heads/$result_branch"
+          if [ "$code" -ne 0 ]; then exit "$code"; fi
+          if ! grep -q '"test_status": "passed"' "$RUNNER_TEMP/result-to-publish.json"; then
+            echo "ERROR: test suite did not produce a valid passing result." >&2
+            exit 1
+          fi
