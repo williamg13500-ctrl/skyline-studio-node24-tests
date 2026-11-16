@@ -32,13 +32,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: fix/v66-test-failures
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: \${{ secrets.GITHUB_TOKEN }}
       - name: Checkout V66 source snapshot
         uses: actions/checkout@v4
         with:
           ref: snapshot/hatchable-v66-source
           path: v66-source
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: \${{ secrets.GITHUB_TOKEN }}
       - name: Compute SHA-256 for all 78 deployed paths
         shell: bash
         run: |
@@ -51,7 +51,45 @@ jobs:
           fi
           output="$RUNNER_TEMP/v66-hash-comparison.csv"
           printf 'path,manifest sha256,computed sha256,match\n' > "$output"
-          while IFS=  verify:
+          jq -r '.files[] | [.path,.sha256] | @tsv' verification/v66-manifest.json |
+          while IFS="$(printf '\t')" read -r path expected; do
+            if [ ! -f "v66-source/$path" ]; then
+              echo "ERROR: missing V66 source path: $path" >&2
+              exit 1
+            fi
+            actual=$(sha256sum -- "v66-source/$path" | awk '{print $1}')
+            if [ "$actual" = "$expected" ]; then match=true; else match=false; fi
+            printf '"%s","%s","%s","%s"\n' "$path" "$expected" "$actual" "$match" >> "$output"
+          done
+          rows=$(($(wc -l < "$output") - 1))
+          if [ "$rows" -ne 78 ]; then
+            echo "ERROR: wrote $rows comparisons; expected 78" >&2
+            exit 1
+          fi
+          cp "$output" "$RUNNER_TEMP/v66-hash-comparison.csv"
+      - name: Publish hash audit to ci-results branch
+        shell: bash
+        env:
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          result_branch="ci-results/fix/v66-test-failures"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"; then
+            git switch -C "$result_branch" "origin/$result_branch"
+          else
+            git switch --orphan "$result_branch"
+            git rm -rf . >/dev/null 2>&1 || true
+            git clean -fdx
+          fi
+          mkdir -p verification
+          cp "$RUNNER_TEMP/v66-hash-comparison.csv" verification/v66-hash-comparison.csv
+          git add verification/v66-hash-comparison.csv
+          git commit -m "Record V66 deployment SHA-256 audit"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$result_branch"
+
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
