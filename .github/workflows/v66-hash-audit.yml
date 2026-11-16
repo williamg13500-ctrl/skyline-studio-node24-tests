@@ -63,6 +63,7 @@ jobs:
           Path("/tmp/v66-hash-mismatch").write_text("yes" if mismatch else "no")
           PY
 
+          cp verification/v66-hash-comparison.csv "$RUNNER_TEMP/v66-hash-comparison.csv"
           result_branch="ci-results/fix/v66-test-failures"
           if git ls-remote --exit-code --heads origin "$result_branch" >/dev/null 2>&1; then
             git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
@@ -73,7 +74,7 @@ jobs:
             git clean -fdx
           fi
           mkdir -p verification
-          cp "$GITHUB_WORKSPACE/verification/v66-hash-comparison.csv" verification/v66-hash-comparison.csv
+          cp "$RUNNER_TEMP/v66-hash-comparison.csv" verification/v66-hash-comparison.csv
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add verification/v66-hash-comparison.csv
