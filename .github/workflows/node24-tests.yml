@@ -32,13 +32,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: fix/v66-test-failures
-          token: \${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout V66 source snapshot
         uses: actions/checkout@v4
         with:
           ref: snapshot/hatchable-v66-source
           path: v66-source
-          token: \${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Compute SHA-256 for all 78 deployed paths
         shell: bash
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: Publish hash audit to ci-results branch
         shell: bash
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           result_branch="ci-results/fix/v66-test-failures"
