@@ -1,0 +1,85 @@
+name: V66 deployment SHA-256 audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/v66-test-failures
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+      - name: Checkout V66 snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: snapshot/hatchable-v66-source
+          path: v66-source
+      - name: Hash deployed paths and publish CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path("verification/v66-manifest.json").read_text())
+          files = manifest["files"]
+          if len(files) != 78:
+              raise SystemExit(f"ERROR: expected 78 manifest files, found {len(files)}")
+
+          rows = []
+          mismatch = False
+          for item in files:
+              path = item["path"]
+              expected = item["sha256"]
+              source = Path("v66-source") / path
+              if not source.is_file():
+                  raise SystemExit(f"ERROR: missing V66 source path: {path}")
+              actual = subprocess.run(
+                  ["sha256sum", "--", str(source)],
+                  check=True, capture_output=True, text=True
+              ).stdout.split()[0]
+              match = actual == expected
+              mismatch = mismatch or not match
+              rows.append((path, expected, actual, str(match).lower()))
+
+          output = Path("verification/v66-hash-comparison.csv")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          with output.open("w", newline="") as stream:
+              writer = csv.writer(stream)
+              writer.writerow(["path", "manifest sha256", "computed sha256", "match"])
+              writer.writerows(rows)
+
+          print(f"Compared {len(rows)} V66 files; matches={sum(r[3] == 'true' for r in rows)}; mismatches={sum(r[3] == 'false' for r in rows)}")
+          Path("/tmp/v66-hash-mismatch").write_text("yes" if mismatch else "no")
+          PY
+
+          result_branch="ci-results/fix/v66-test-failures"
+          if git ls-remote --exit-code --heads origin "$result_branch" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
+            git switch -C "$result_branch" "origin/$result_branch"
+          else
+            git switch --orphan "$result_branch"
+            git rm -rf . >/dev/null 2>&1 || true
+            git clean -fdx
+          fi
+          mkdir -p verification
+          cp "$GITHUB_WORKSPACE/verification/v66-hash-comparison.csv" verification/v66-hash-comparison.csv
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add verification/v66-hash-comparison.csv
+          git commit -m "Record V66 deployment SHA-256 audit"
+          git push origin "HEAD:refs/heads/$result_branch"
+          if [ "$(cat /tmp/v66-hash-mismatch)" = "yes" ]; then
+            echo "ERROR: one or more V66 files do not match the deployment manifest." >&2
+            exit 1
+          fi
