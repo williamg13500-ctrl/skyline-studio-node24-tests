@@ -230,3 +230,34 @@ jobs:
           git add verification/latest-result.json
           git commit -m "Record Node 24 verification for $BRANCH"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$RESULT_BRANCH"
+
+      - name: Enforce complete verification gate
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          result_path = Path("/tmp/latest-result.json")
+          if not result_path.is_file():
+              raise SystemExit("No machine-readable verification result was produced.")
+
+          result = json.loads(result_path.read_text())
+          errors = []
+
+          if result.get("test_status") != "passed":
+              errors.append("Source suite status is " + str(result.get("test_status")))
+          counts = result.get("test_counts") or {}
+          if counts.get("total", 0) < 1 or counts.get("failed", 0) != 0:
+              errors.append("Source suite counts are incomplete or contain failures: " + json.dumps(counts))
+          if result.get("browser_e2e_result") != "passed":
+              errors.append("Browser E2E status is " + str(result.get("browser_e2e_result")))
+
+          if errors:
+              for error in errors:
+                  print("::error::" + error)
+              raise SystemExit(1)
+
+          print("Complete verification passed: source tests and browser E2E are both green.")
+          PY
