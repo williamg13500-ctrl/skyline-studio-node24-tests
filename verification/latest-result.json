@@ -1,0 +1,19 @@
+{
+  "node_version": "v24.22.2",
+  "python_version": "Python 3.15.2",
+  "commit_hash": "6efa60396638d7268412b98f7541e1ac960e9d00",
+  "branch": "scratch/v66-browser-e2e-gate",
+  "test_status": "passed",
+  "test_exit_code": 0,
+  "test_counts": {
+    "total": 166,
+    "passed": 166,
+    "failed": 0,
+    "skipped": 0
+  },
+  "failing_tests": [],
+  "missing_v66_manifest_files": [],
+  "browser_e2e_result": "failed",
+  "browser_e2e_error": "",
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/43820608558"
+}
