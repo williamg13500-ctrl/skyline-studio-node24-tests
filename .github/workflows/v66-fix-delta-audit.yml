@@ -1,0 +1,106 @@
+name: V66 repair-branch delta SHA-256 audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/v66-test-failures
+    paths:
+      - .github/workflows/v66-fix-delta-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout audit branch and manifest
+        uses: actions/checkout@v4
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/v66-test-failures
+          path: repair-source
+      - name: Compare repair branch with V66 manifest and list extras
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("verification/v66-manifest.json").read_text())
+          entries = manifest["files"]
+          expected_paths = {item["path"] for item in entries}
+          repair_root = Path("repair-source")
+
+          delta_rows = []
+          missing = []
+          for item in entries:
+              path = item["path"]
+              expected = item["sha256"]
+              source = repair_root / path
+              if not source.is_file():
+                  missing.append(path)
+                  continue
+              actual = hashlib.sha256(source.read_bytes()).hexdigest()
+              delta_rows.append((path, expected, actual, str(actual == expected).lower()))
+
+          extra_rows = []
+          tracked = __import__("subprocess").run(
+              ["git", "-C", str(repair_root), "ls-files", "-z"],
+              check=True, capture_output=True
+          ).stdout.decode().split("\\0")
+          for path in sorted(p for p in tracked if p and p not in expected_paths):
+              source = repair_root / path
+              if source.is_file():
+                  extra_rows.append((path, hashlib.sha256(source.read_bytes()).hexdigest()))
+
+          delta = Path("verification/v66-fix-delta-comparison.csv")
+          delta.parent.mkdir(parents=True, exist_ok=True)
+          with delta.open("w", newline="") as stream:
+              writer = csv.writer(stream)
+              writer.writerow(["path", "V66 manifest sha256", "repair-branch sha256", "match"])
+              writer.writerows(delta_rows)
+
+          extras = Path("verification/v66-fix-extra-files.csv")
+          with extras.open("w", newline="") as stream:
+              writer = csv.writer(stream)
+              writer.writerow(["path", "repair-branch sha256"])
+              writer.writerows(extra_rows)
+
+          matches = sum(row[3] == "true" for row in delta_rows)
+          differences = sum(row[3] == "false" for row in delta_rows)
+          print(f"Manifest paths={len(entries)}; present={len(delta_rows)}; missing={len(missing)}")
+          print(f"Matches={matches}; differences={differences}; extra tracked files={len(extra_rows)}")
+          if missing:
+              print("Missing paths: " + ", ".join(missing))
+              raise SystemExit("ERROR: manifest paths are missing from repair branch")
+          PY
+
+          mv verification/v66-fix-delta-comparison.csv "$RUNNER_TEMP/v66-fix-delta-comparison.csv"
+          mv verification/v66-fix-extra-files.csv "$RUNNER_TEMP/v66-fix-extra-files.csv"
+          result_branch="ci-results/fix/v66-test-failures"
+          if git ls-remote --exit-code --heads origin "$result_branch" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
+            git switch -C "$result_branch" "origin/$result_branch"
+          else
+            git switch --orphan "$result_branch"
+            git rm -rf . >/dev/null 2>&1 || true
+            git clean -fdx
+          fi
+          mkdir -p verification
+          cp "$RUNNER_TEMP/v66-fix-delta-comparison.csv" verification/v66-fix-delta-comparison.csv
+          cp "$RUNNER_TEMP/v66-fix-extra-files.csv" verification/v66-fix-extra-files.csv
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add verification/v66-fix-delta-comparison.csv verification/v66-fix-extra-files.csv
+          if ! git diff --cached --quiet; then
+            git commit -m "Record V66 repair-branch delta audit"
+            git push origin "HEAD:refs/heads/$result_branch"
+          else
+            echo "V66 repair-branch audit CSVs are already current on $result_branch."
+          fi
