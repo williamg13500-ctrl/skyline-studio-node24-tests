@@ -75,7 +75,7 @@ jobs:
           from pathlib import Path
           code=int(sys.argv[1]); log=Path(sys.argv[2]).read_text(errors="replace")
           def count(name):
-              m=re.findall(r"^# "+re.escape(name)+r" (\d+)\s*$",log,re.M)
+              m=re.findall(r"^(?:ℹ|#)\s*"+re.escape(name)+r"\s+(\d+)\s*$",log,re.M)
               return int(m[-1]) if m else 0
           counts={"total":count("tests"),"passed":count("pass"),"failed":count("fail"),"skipped":count("skipped")}
           status="passed" if code==0 and counts["total"]>0 and counts["failed"]==0 else "failed"
