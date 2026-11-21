@@ -1,0 +1,40 @@
+{
+  "node_version": "v24.22.3",
+  "python_version": "Python 3.15.2",
+  "commit_hash": "70e48d0b018f09baec9850fa4071f02030db4b26",
+  "branch": "release-candidate/v66-six-files",
+  "test_status": "failed",
+  "test_exit_code": 1,
+  "test_counts": {
+    "total": 166,
+    "passed": 162,
+    "failed": 4,
+    "skipped": 0
+  },
+  "failing_tests": [
+    {
+      "name": "admin AI provider test succeeds only after a real provider response",
+      "error": "file:///tmp/skyline-verification-eha7dv18/api/admin/readiness.js:1\nimport {admin,config,ai,api} from 'hatchable';\n^^^\nSyntaxError: The requested module 'hatchable' does not provide an export named 'api'\nat #asyncInstantiate (node:internal/modules/esm/module_job:455:21)\nat async ModuleJob.run (node:internal/modules/esm/module_job:553:5)\nat async node:internal/modules/esm/loader:647:26\nat async TestContext.<anonymous> (file:///tmp/skyline-verification-eha7dv18/tests/api.test.js:164:28)\nat async Test.run (node:internal/test_runner/test:1409:7)\nat async Test.processPendingSubtests (node:internal/test_runner/test:974:7)",
+      "classification": "outdated_test"
+    },
+    {
+      "name": "room edits preserve explicit open connections elsewhere in the plan",
+      "error": "Error: The new partition must leave at least 1.5 m on each side.\nat fail (file:///tmp/skyline-verification-eha7dv18/lib/editor.js:11:32)\nat splitRoom (file:///tmp/skyline-verification-eha7dv18/lib/editor.js:61:87)\nat applyGeometryEdit (file:///tmp/skyline-verification-eha7dv18/lib/editor.js:239:60)\nat TestContext.<anonymous> (file:///tmp/skyline-verification-eha7dv18/tests/editor.test.js:91:15)\nat async Test.run (node:internal/test_runner/test:1409:7)\nat async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\nstatus: 422\n}",
+      "classification": "outdated_test"
+    },
+    {
+      "name": "missing optional opening arrays are rejected as geometry validation, not a renderer exception",
+      "error": "AssertionError [ERR_ASSERTION]: The validation function is expected to return \"true\". Received 'Edited geometry failed independent validation: no_entrance: No exterior entrance is connected to the layout. [floor-0]; unreachable_room: Living / dining / kitchen has no connected route to the entrance. [f0-room-1]; unreachable_room: Bathroom 1 has no connected route to the entrance. [f0-room-2]; unreachable_room: Bathroom 2 has no connected route to the entrance. [f0-room-3]; unreachable_room: Bedroom 1 has no connected route to the entrance. [f0-room-4]; unreachable_room: Bedroom 2 has no connected route to the entrance. [f0-room-5]; unreachable_room: Bedroom 3 has no connected route to the entrance. [f0-room-6]; unreachable_room: Entry / hall has no connected route to the entrance. [f0-room-7]'\n\nCaught error:\n\nError: Check the project brief.\nat async TestContext.<anonymous> (file:///tmp/skyline-verification-eha7dv18/tests/geometry.test.js:94:2)\nat async Test.run (node:internal/test_runner/test:1409:7)\nat async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\ngeneratedMessage: true,\ncode: 'ERR_ASSERTION',\nactual: Error: Check the project brief.\nat buildDraftFromGeometry (file:///tmp/skyline-verification-eha7dv18/lib/engine.js:205:203)\nat file:///tmp/skyline-verification-eha7dv18/tests/geometry.test.js:94:27\nat waitForActual (node:assert:632:21)\nat strict.rejects (node:assert:769:31)\nat TestContext.<anonymous> (file:///tmp/skyline-verification-eha7dv18/tests/geometry.test.js:94:15)\nat async Test.run (node:internal/test_runner/test:1409:7)\nat async Test.processPendingSubtests (node:internal/test_runner/test:974:7),\noperator: 'rejects',\ndiff: 'simple'\n}",
+      "classification": "outdated_test"
+    },
+    {
+      "name": "adjacent boundary backtracking and overlapping edges are rejected",
+      "error": "AssertionError [ERR_ASSERTION]: The validation function is expected to return \"true\". Received false\n\nCaught error:\n\nSiteInputError: Adjacent boundary edges overlap by reversing direction. Remove the backtracking point.\nat fails (file:///tmp/skyline-verification-eha7dv18/tests/site-intelligence.test.js:6:33)\nat TestContext.<anonymous> (file:///tmp/skyline-verification-eha7dv18/tests/site-intelligence.test.js:23:2)\nat Test.runInAsyncScope (node:async_hooks:227:14)\nat Test.run (node:internal/test_runner/test:1402:25)\nat Test.processPendingSubtests (node:internal/test_runner/test:974:18)\nat Test.postRun (node:internal/test_runner/test:1542:19)\nat Test.run (node:internal/test_runner/test:1467:12)\nat async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\ngeneratedMessage: true,\ncode: 'ERR_ASSERTION',\nactual: SiteInputError: Adjacent boundary edges overlap by reversing direction. Remove the backtracking point.\nat normalizeSiteContext (file:///tmp/skyline-verification-eha7dv18/lib/site-intelligence.js:45:65)\nat file:///tmp/skyline-verification-eha7dv18/tests/site-intelligence.test.js:23:12\nat getActual (node:assert:611:5)\nat strict.throws (node:assert:759:24)\nat fails (file:///tmp/skyline-verification-eha7dv18/tests/site-intelligence.test.js:6:33)\nat TestContext.<anonymous> (file:///tmp/skyline-verification-eha7dv18/tests/site-intelligence.test.js:23:2)\nat Test.runInAsyncScope (node:async_hooks:227:14)\nat Test.run (node:internal/test_runner/test:1402:25)\nat Test.processPendingSubtests (node:internal/test_runner/test:974:18)\nat Test.postRun (node:internal/test_runner/test:1542:19),\noperator: 'throws',\ndiff: 'simple'\n}",
+      "classification": "outdated_test"
+    }
+  ],
+  "missing_v66_manifest_files": [],
+  "browser_e2e_result": "failed",
+  "browser_e2e_error": "",
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/44904560295"
+}
