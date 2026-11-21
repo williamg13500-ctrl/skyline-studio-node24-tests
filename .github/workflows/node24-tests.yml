@@ -358,6 +358,7 @@ jobs:
           Path("/tmp/latest-result.json").write_text(json.dumps(result, indent=2) + "\n")
           print(json.dumps(result, indent=2))
           PY
+          git checkout -- lib/verification/source-tests.json
           BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
           RESULT_BRANCH="ci-results/${BRANCH}"
           git config user.name "github-actions[bot]"
