@@ -146,8 +146,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout source
+      - name: Checkout exact candidate source commit
         uses: actions/checkout@v4
+        with:
+          ref: 45f455eae21f34d6d756e841137204bf0e71777e
+      - name: Checkout pinned repair test bundle
+        uses: actions/checkout@v4
+        with:
+          repository: williamg13500-ctrl/skyline-studio-node24-tests
+          ref: e8c4862242e3ece82e3b376ae08f73995e20b656
+          path: repair-test-bundle
       - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
@@ -156,6 +164,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Verify and install pinned repair test bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_commit=$(git rev-parse HEAD)
+          repair_commit=$(git -C repair-test-bundle rev-parse HEAD)
+          repair_blob=$(git -C repair-test-bundle rev-parse HEAD:lib/verification/source-tests.json)
+          test "$candidate_commit" = "45f455eae21f34d6d756e841137204bf0e71777e"
+          test "$repair_commit" = "e8c4862242e3ece82e3b376ae08f73995e20b656"
+          test "$repair_blob" = "dc99f15b5cf526e339878be7ab9c872675e43e1d"
+          cp repair-test-bundle/lib/verification/source-tests.json lib/verification/source-tests.json
+          echo "Candidate source commit: $candidate_commit"
+          echo "Repair bundle commit: $repair_commit"
+          echo "Repair source-tests blob: $repair_blob"
       - name: Run complete Skyline suite
         id: tests
         continue-on-error: true
@@ -319,8 +341,11 @@ jobs:
           result = {
               "node_version": subprocess.check_output(["node","--version"], text=True).strip(),
               "python_version": subprocess.check_output(["python3","--version"], text=True).strip(),
-              "commit_hash": os.environ["GITHUB_SHA"],
+              "commit_hash": "45f455eae21f34d6d756e841137204bf0e71777e",
+              "workflow_commit": os.environ["GITHUB_SHA"],
               "branch": os.environ.get("GITHUB_HEAD_REF") or os.environ["GITHUB_REF_NAME"],
+              "test_bundle_commit": "e8c4862242e3ece82e3b376ae08f73995e20b656",
+              "test_bundle_blob": "dc99f15b5cf526e339878be7ab9c872675e43e1d",
               "test_status": test_status,
               "test_exit_code": test_exit_code,
               "test_counts": counts,
