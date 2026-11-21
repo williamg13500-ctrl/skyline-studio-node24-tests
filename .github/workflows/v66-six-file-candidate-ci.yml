@@ -94,6 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           git checkout -- lib/verification/source-tests.json
+          rm -f verification/v66-six-file-candidate-comparison.csv
           result_branch="ci-results/fix/v66-test-failures"
           git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
           git switch -C "$result_branch" "origin/$result_branch"
