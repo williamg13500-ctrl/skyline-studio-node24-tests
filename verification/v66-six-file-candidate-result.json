@@ -1,0 +1,14 @@
+{
+  "node_version": "v24.22.3",
+  "candidate_commit": "3fed20b51d06f261d062a9a5aab0429594ff7285",
+  "branch": "release-candidate/v66-six-files",
+  "test_status": "failed",
+  "test_exit_code": 0,
+  "test_counts": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser_e2e_result": "not_run_out_of_scope"
+}
