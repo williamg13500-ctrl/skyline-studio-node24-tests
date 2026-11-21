@@ -35,7 +35,7 @@ jobs:
           python3 - <<'PY'
           import csv, hashlib, json
           from pathlib import Path
-          manifest=json.loads(Path("verification/v66-manifest.json").read_text())
+          manifest=json.loads(Path("repair-test-bundle/verification/v66-manifest.json").read_text())
           rows=[]
           missing=[]
           for item in manifest["files"]:
@@ -55,6 +55,7 @@ jobs:
           for row in differences: print("DIFF,"+",".join(row))
           if missing: raise SystemExit("Missing manifest paths: "+", ".join(missing))
           if len(differences)!=6 or matches!=72: raise SystemExit("Candidate must contain exactly six manifest differences and 72 matches")
+          cp verification/v66-six-file-candidate-comparison.csv "$RUNNER_TEMP/v66-six-file-candidate-comparison.csv"
           PY
       - name: Run full Node 24 suite using repair-branch test bundle
         shell: bash
@@ -96,7 +97,7 @@ jobs:
           git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
           git switch -C "$result_branch" "origin/$result_branch"
           mkdir -p verification
-          cp "$GITHUB_WORKSPACE/verification/v66-six-file-candidate-comparison.csv" verification/v66-six-file-candidate-comparison.csv
+          cp "$RUNNER_TEMP/v66-six-file-candidate-comparison.csv" verification/v66-six-file-candidate-comparison.csv
           if [ -f "$RUNNER_TEMP/latest-result.json" ]; then cp "$RUNNER_TEMP/latest-result.json" verification/v66-six-file-candidate-result.json; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
