@@ -375,3 +375,83 @@ jobs:
           git add verification/latest-result.json
           git commit -m "Record Node 24 verification for $BRANCH"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$RESULT_BRANCH"
+
+  archive-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact audited candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: 45f455eae21f34d6d756e841137204bf0e71777e
+      - name: Checkout V66 manifest
+        uses: actions/checkout@v4
+        with:
+          repository: williamg13500-ctrl/skyline-studio-node24-tests
+          ref: fix/v66-test-failures
+          path: audit-manifest
+      - name: Download and hash GitHub source archive without uploading it
+        shell: bash
+        env:
+          SOURCE_COMMIT: 45f455eae21f34d6d756e841137204bf0e71777e
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/skyline-v66-candidate-$SOURCE_COMMIT.zip"
+          url="https://codeload.github.com/$GITHUB_REPOSITORY/zip/$SOURCE_COMMIT"
+          curl --location --fail --silent --show-error --retry 3 "$url" --output "$archive"
+          python3 - "$archive" "$SOURCE_COMMIT" <<'PY'
+          import hashlib, json, subprocess, sys, zipfile
+          from pathlib import Path
+
+          archive = Path(sys.argv[1])
+          commit = sys.argv[2]
+          manifest = json.loads(Path("audit-manifest/verification/v66-manifest.json").read_text())
+          manifest_paths = {item["path"] for item in manifest["files"]}
+          tree_paths = set(subprocess.check_output(
+              ["git", "ls-tree", "-r", "--name-only", commit], text=True
+          ).splitlines())
+          with zipfile.ZipFile(archive) as zf:
+              zip_paths = [name for name in zf.namelist() if not name.endswith("/")]
+          if not zip_paths:
+              raise SystemExit("GitHub ZIP contains no files")
+          roots = {name.split("/", 1)[0] for name in zip_paths}
+          if len(roots) != 1:
+              raise SystemExit(f"Expected one archive root folder; found {sorted(roots)}")
+          relative_paths = {name.split("/", 1)[1] for name in zip_paths}
+          missing_from_zip = sorted(tree_paths - relative_paths)
+          unexpected_in_zip = sorted(relative_paths - tree_paths)
+          missing_manifest = sorted(manifest_paths - relative_paths)
+          extras = sorted(relative_paths - manifest_paths)
+          expected_extras = sorted([
+              ".github/workflows/node24-tests.yml",
+              "playwright.config.js",
+              "tests/e2e/site-intelligence.spec.js"
+          ])
+          sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+          report = {
+              "source_commit": commit,
+              "archive_url": f"https://github.com/{__import__('os').environ['GITHUB_REPOSITORY']}/archive/{commit}.zip",
+              "sha256": sha,
+              "zip_file_count": len(zip_paths),
+              "git_tree_file_count": len(tree_paths),
+              "manifest_path_count": len(manifest_paths),
+              "missing_manifest_paths": missing_manifest,
+              "missing_git_tree_files": missing_from_zip,
+              "unexpected_zip_files": unexpected_in_zip,
+              "extra_files": extras,
+              "expected_extra_files": expected_extras
+          }
+          print(json.dumps(report, indent=2))
+          if (
+              len(manifest_paths) != 78
+              or len(zip_paths) != 81
+              or len(tree_paths) != 81
+              or missing_manifest
+              or missing_from_zip
+              or unexpected_in_zip
+              or extras != expected_extras
+          ):
+              raise SystemExit("Archive audit failed: GitHub ZIP does not match the 78+3 source tree")
+          print("ARCHIVE AUDIT PASSED: 78 manifest paths plus the three known extra files.")
+          print("The ZIP was temporary on the runner and was not uploaded as an artifact.")
+          PY
