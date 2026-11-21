@@ -1,12 +1,12 @@
 {
   "node_version": "v24.22.3",
-  "candidate_commit": "3fed20b51d06f261d062a9a5aab0429594ff7285",
+  "candidate_commit": "901ba867cc253dc0c3d5fc4fcad16cd16e175d10",
   "branch": "release-candidate/v66-six-files",
-  "test_status": "failed",
+  "test_status": "passed",
   "test_exit_code": 0,
   "test_counts": {
-    "total": 0,
-    "passed": 0,
+    "total": 166,
+    "passed": 166,
     "failed": 0,
     "skipped": 0
   },
