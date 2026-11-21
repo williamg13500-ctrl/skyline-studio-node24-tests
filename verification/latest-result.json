@@ -2,7 +2,7 @@
   "node_version": "v24.22.3",
   "python_version": "Python 3.15.2",
   "commit_hash": "45f455eae21f34d6d756e841137204bf0e71777e",
-  "workflow_commit": "38577ef30d1bc8f3896efa48fe8b0a1d37681637",
+  "workflow_commit": "28fc99d3fc40c47a8ffecffe1daa857f1b432107",
   "branch": "release-candidate/v66-six-files",
   "test_bundle_commit": "e8c4862242e3ece82e3b376ae08f73995e20b656",
   "test_bundle_blob": "dc99f15b5cf526e339878be7ab9c872675e43e1d",
@@ -18,5 +18,5 @@
   "missing_v66_manifest_files": [],
   "browser_e2e_result": "failed",
   "browser_e2e_error": "",
-  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/44905395608"
+  "run_url": "https://github.com/williamg13500-ctrl/skyline-studio-node24-tests/actions/runs/44905605664"
 }
