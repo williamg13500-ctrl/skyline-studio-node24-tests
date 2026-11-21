@@ -7,6 +7,7 @@ on:
     branches:
       - 'scratch/**'
       - 'snapshot/**'
+      - 'release-candidate/v66-six-files'
     paths:
       - 'api/**'
       - 'lib/**'
@@ -22,6 +23,121 @@ permissions:
   contents: write
 
 jobs:
+
+  v66-hash-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout pinned V66 manifest
+        uses: actions/checkout@v4
+        with:
+          ref: fix/v66-test-failures
+          path: audit-manifest
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate-source
+      - name: Compute and enforce 78-path SHA-256 comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path("audit-manifest/verification/v66-manifest.json").read_text())
+          files = manifest["files"]
+          if len(files) != 78:
+              raise SystemExit(f"Expected 78 manifest entries, got {len(files)}")
+
+          pinned = {
+              "lib/access.js": "893a4e07e6339f62ef9df255fb5d6361f42f3217e754a88356e0fb0c7650cefe",
+              "lib/engine.js": "20d56dd67899bc183b41d62653592fa1261896c06844d2610a1cf655981b2d74",
+              "lib/validation.js": "fd991100b248d12fa40214f96f90a2002075ca7aa54f2b9c5eded973ee872daf",
+              "lib/quality-validation.js": "070d9b89991e56b88eec8d2d3e66037aa43017b6fbdc6b3e3a358fc06d811503",
+              "lib/editor.js": "966004df152165fde7579e4414e22c8ce0e4abcae65d8cf3277a82fd03abb188",
+              "lib/http-errors.js": "606a703213ce759be12fde1fd6bdcd8b182481adbf4e97adb606ae86dbaf61ab",
+          }
+
+          rows = []
+          missing = []
+          for entry in files:
+              path = entry["path"]
+              expected = entry["sha256"]
+              source = Path("candidate-source") / path
+              if not source.is_file():
+                  actual = ""
+                  match = "missing"
+                  missing.append(path)
+              else:
+                  actual = hashlib.sha256(source.read_bytes()).hexdigest()
+                  match = "true" if actual == expected else "false"
+              rows.append((path, expected, actual, match))
+
+          matches = [r for r in rows if r[3] == "true"]
+          differences = [r for r in rows if r[3] == "false"]
+          difference_paths = {r[0] for r in differences}
+          failures = []
+          if missing:
+              failures.append("missing manifest paths: " + ", ".join(missing))
+          if len(matches) != 72:
+              failures.append(f"expected 72 matches, found {len(matches)}")
+          if len(differences) != 6:
+              failures.append(f"expected 6 differences, found {len(differences)}")
+          if difference_paths != set(pinned):
+              failures.append("difference paths do not equal the six pinned paths")
+          for path, expected_hash in pinned.items():
+              actual = next((r[2] for r in rows if r[0] == path), None)
+              if actual != expected_hash:
+                  failures.append(f"pinned hash mismatch for {path}: {actual}")
+
+          out = Path.home() / "candidate-comparison.csv"
+          with out.open("w", newline="") as handle:
+              writer = csv.writer(handle)
+              writer.writerow(["path", "manifest sha256", "computed sha256", "match"])
+              writer.writerows(rows)
+
+          print(f"Manifest paths: {len(rows)}")
+          print(f"Matches: {len(matches)}")
+          print(f"Differences: {len(differences)}")
+          print(f"Missing: {len(missing)}")
+          print(f"CSV: {out}")
+          if failures:
+              print("AUDIT FAILED:")
+              for item in failures:
+                  print(" - " + item)
+              raise SystemExit(1)
+          print("AUDIT PASSED: exactly the six pinned candidate files differ.")
+          PY
+          cp "$HOME/candidate-comparison.csv" "$RUNNER_TEMP/v66-six-file-candidate-comparison.csv"
+      - name: Publish candidate hash CSV
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          result_branch="ci-results/v66-six-file-hash-audit"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"; then
+            git switch -C "$result_branch" "origin/$result_branch"
+          else
+            git switch --orphan "$result_branch"
+            git rm -rf . >/dev/null 2>&1 || true
+            git clean -fdx
+          fi
+          mkdir -p verification
+          cp "$RUNNER_TEMP/v66-six-file-candidate-comparison.csv" verification/v66-six-file-candidate-comparison.csv
+          printf '%s\n' "${GITHUB_SHA}" > verification/audited-candidate-commit.txt
+          git add verification/v66-six-file-candidate-comparison.csv verification/audited-candidate-commit.txt
+          git commit -m "Record V66 six-file candidate hash audit"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:refs/heads/$result_branch"
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
