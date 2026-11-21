@@ -28,6 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Checkout candidate repository for result publishing
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Checkout pinned V66 manifest
         uses: actions/checkout@v4
         with:
