@@ -53,7 +53,7 @@ jobs:
           tracked = __import__("subprocess").run(
               ["git", "-C", str(repair_root), "ls-files", "-z"],
               check=True, capture_output=True
-          ).stdout.decode().split("\\0")
+          ).stdout.decode().split("\0")
           for path in sorted(p for p in tracked if p and p not in expected_paths):
               source = repair_root / path
               if source.is_file():
