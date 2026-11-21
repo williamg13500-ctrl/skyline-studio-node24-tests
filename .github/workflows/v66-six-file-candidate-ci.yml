@@ -1,0 +1,105 @@
+name: V66 six-file candidate verification
+
+on:
+  push:
+    branches:
+      - release-candidate/v66-six-files
+    paths:
+      - .github/workflows/v66-six-file-candidate-ci.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+      - name: Checkout repair test bundle
+        uses: actions/checkout@v4
+        with:
+          ref: fix/v66-test-failures
+          path: repair-test-bundle
+      - name: Set up Node 24 and Python
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Audit candidate against V66 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv, hashlib, json
+          from pathlib import Path
+          manifest=json.loads(Path("verification/v66-manifest.json").read_text())
+          rows=[]
+          missing=[]
+          for item in manifest["files"]:
+              p=Path(item["path"])
+              if not p.is_file():
+                  missing.append(item["path"])
+                  continue
+              actual=hashlib.sha256(p.read_bytes()).hexdigest()
+              rows.append((item["path"],item["sha256"],actual,str(actual==item["sha256"]).lower()))
+          out=Path("verification/v66-six-file-candidate-comparison.csv")
+          out.parent.mkdir(parents=True,exist_ok=True)
+          with out.open("w",newline="") as f:
+              w=csv.writer(f);w.writerow(["path","V66 manifest sha256","candidate sha256","match"]);w.writerows(rows)
+          matches=sum(r[3]=="true" for r in rows)
+          differences=[r for r in rows if r[3]=="false"]
+          print(f"manifest_paths={len(manifest['files'])} present={len(rows)} missing={len(missing)} matches={matches} differences={len(differences)}")
+          for row in differences: print("DIFF,"+",".join(row))
+          if missing: raise SystemExit("Missing manifest paths: "+", ".join(missing))
+          if len(differences)!=6 or matches!=72: raise SystemExit("Candidate must contain exactly six manifest differences and 72 matches")
+          PY
+      - name: Run full Node 24 suite using repair-branch test bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p lib/verification
+          cp repair-test-bundle/lib/verification/source-tests.json lib/verification/source-tests.json
+          echo "Node version: $(node --version)"
+          echo "Candidate commit: $(git rev-parse HEAD)"
+          set +e
+          python3 lib/verification/run-tests.py > "$RUNNER_TEMP/candidate-tests.log" 2>&1
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/candidate-tests.log"
+          python3 - "$code" "$RUNNER_TEMP/candidate-tests.log" "$RUNNER_TEMP/latest-result.json" <<'PY'
+          import json,re,subprocess,sys
+          from pathlib import Path
+          code=int(sys.argv[1]); log=Path(sys.argv[2]).read_text(errors="replace")
+          def count(name):
+              m=re.findall(r"^# "+re.escape(name)+r" (\d+)\s*$",log,re.M)
+              return int(m[-1]) if m else 0
+          counts={"total":count("tests"),"passed":count("pass"),"failed":count("fail"),"skipped":count("skipped")}
+          status="passed" if code==0 and counts["total"]>0 and counts["failed"]==0 else "failed"
+          result={"node_version":subprocess.check_output(["node","--version"],text=True).strip(),
+                  "candidate_commit":subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
+                  "branch":"release-candidate/v66-six-files","test_status":status,
+                  "test_exit_code":code,"test_counts":counts,
+                  "browser_e2e_result":"not_run_out_of_scope"}
+          Path(sys.argv[3]).write_text(json.dumps(result,indent=2)+"\n")
+          print(json.dumps(result,indent=2))
+          if status!="passed": raise SystemExit(code or 1)
+          PY
+      - name: Publish candidate evidence files
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          result_branch="ci-results/fix/v66-test-failures"
+          git fetch origin "refs/heads/$result_branch:refs/remotes/origin/$result_branch"
+          git switch -C "$result_branch" "origin/$result_branch"
+          mkdir -p verification
+          cp "$GITHUB_WORKSPACE/verification/v66-six-file-candidate-comparison.csv" verification/v66-six-file-candidate-comparison.csv
+          if [ -f "$RUNNER_TEMP/latest-result.json" ]; then cp "$RUNNER_TEMP/latest-result.json" verification/v66-six-file-candidate-result.json; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add verification/v66-six-file-candidate-comparison.csv verification/v66-six-file-candidate-result.json
+          git commit -m "Record V66 six-file candidate verification"
+          git push origin "HEAD:refs/heads/$result_branch"
