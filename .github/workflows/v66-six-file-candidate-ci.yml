@@ -55,8 +55,8 @@ jobs:
           for row in differences: print("DIFF,"+",".join(row))
           if missing: raise SystemExit("Missing manifest paths: "+", ".join(missing))
           if len(differences)!=6 or matches!=72: raise SystemExit("Candidate must contain exactly six manifest differences and 72 matches")
-          cp verification/v66-six-file-candidate-comparison.csv "$RUNNER_TEMP/v66-six-file-candidate-comparison.csv"
           PY
+          cp verification/v66-six-file-candidate-comparison.csv "$RUNNER_TEMP/v66-six-file-candidate-comparison.csv"
       - name: Run full Node 24 suite using repair-branch test bundle
         shell: bash
         run: |
